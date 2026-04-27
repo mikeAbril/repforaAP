@@ -1,0 +1,65 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+:root {
+  --primary: #2e7d32;
+  --primary-dark: #1b5e20;
+  --primary-light: #e8f5e9;
+  --text-dark: #333333;
+  --text-muted: #666666;
+  --bg-light: #f4f7f5;
+  --white: #ffffff;
+  --border: #e0e0e0;
+  --radius: 12px;
+  --shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+
+  /* Colores Repfora */
+  --color_card: #318335;
+  --color_text_card: white;
+  --color_button: #2e7d32;
+  --color_text_button: white;
+  --color_box: #2e7d32;
+  --color_button_closed: black;
+  --color_header: #2e7d32;
+  --color_input: #2e7d32;
+  --color_tooltip: #d4cece;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: var(--bg-light);
+  color: var(--text-dark);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+#app {
+  height: 100%;
+}
+
+a {
+  text-decoration: none;
+  color: var(--primary);
+  font-weight: 500;
+  transition: color 0.2s;
+}
+
+a:hover {
+  color: var(--primary-dark);
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  font-family: inherit;
+}
+
+input {
+  font-family: inherit;
+}

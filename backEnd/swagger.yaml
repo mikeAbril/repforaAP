@@ -1,0 +1,348 @@
+openapi: 3.0.0
+info:
+  title: API Automatización de Certificados — SENA
+  description: |
+    API REST para el procesamiento y descarga automatizada de certificados
+    de seguridad social (SOI, Asopagos, Mi Planilla, Aportes en Línea).
+
+    ## Flujo General
+    1. El **contratista** envía un formulario público (POST /api/reports).
+    2. El **scraper** (cron a las 2:00 AM o manual) procesa los reportes pendientes.
+    3. Si el scraper descarga el PDF exitosamente, lo **sube a Google Drive**.
+    4. El **supervisor** consulta el estado de las solicitudes desde el dashboard.
+
+    ## Autenticación
+    Los endpoints protegidos requieren un token JWT enviado como `Authorization: Bearer <token>`.
+  version: 2.0.0
+servers:
+  - url: http://localhost:3000
+    description: Servidor de Desarrollo Local
+
+tags:
+  - name: Reportes
+    description: Envío de solicitudes de certificados (público)
+  - name: Auth
+    description: Autenticación de supervisores
+  - name: Dashboard
+    description: Estadísticas e historial (protegido)
+  - name: Supervisores
+    description: Gestión de perfil y listado
+  - name: Sistema
+    description: Control del cron de scraping
+
+paths:
+  # ─────────────────────────────────────────────
+  # REPORTES (público)
+  # ─────────────────────────────────────────────
+  /api/reports:
+    post:
+      tags: [Reportes]
+      summary: Crear un nuevo reporte
+      description: |
+        Envía los datos del contratista para iniciar el proceso automatizado
+        de descarga de certificado. El reporte se crea con status `pending` y
+        será procesado por el scraper en el próximo ciclo.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - documentType
+                - documentNumber
+                - fullName
+                - eps
+                - platform
+                - platformData
+              properties:
+                documentType:
+                  type: string
+                  enum: [CC, CE, PA, TI]
+                  description: Tipo de documento de identidad.
+                documentNumber:
+                  type: string
+                  description: Número de documento (sin puntos ni espacios).
+                  example: "37898093"
+                fullName:
+                  type: string
+                  description: Nombre completo del contratista.
+                  example: "MONICA YANETH BARRERA BALLESTEROS"
+                eps:
+                  type: string
+                  description: Nombre de la EPS. Usar "N/A" si la plataforma no lo exige.
+                  example: "SANITAS"
+                platform:
+                  type: string
+                  enum: [soi, asopagos, mi_planilla, aportes_en_linea]
+                  description: Plataforma a consultar.
+                supervisorId:
+                  type: string
+                  description: ID del supervisor encargado (ObjectId de MongoDB).
+                  example: "60b8d295f1..."
+                platformData:
+                  type: object
+                  description: |
+                    Campos específicos según la plataforma elegida:
+                    - **soi**: `{ mes, anio }`
+                    - **asopagos**: `{ mes, anio, tipoCertificado }`
+                    - **mi_planilla**: `{ mes, anio, numeroPlanilla, valorPagado, fechaPagoDia, fechaPagoMes, fechaPagoAnio }`
+                    - **aportes_en_linea**: `{ mesDesde, anioDesde, mesHasta, anioHasta }`
+      responses:
+        "201":
+          description: Reporte encolado exitosamente con status `pending`.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Reporte creado correctamente. Estado: pendiente."
+                  report:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      platform:
+                        type: string
+                      status:
+                        type: string
+                        example: "pending"
+        "400":
+          description: Error de validación (faltan campos obligatorios).
+
+  # ─────────────────────────────────────────────
+  # AUTENTICACIÓN
+  # ─────────────────────────────────────────────
+  /api/auth/login:
+    post:
+      tags: [Auth]
+      summary: Iniciar sesión como supervisor
+      description: |
+        Autentica un supervisor usando su número de documento y contraseña.
+        Retorna un token JWT válido para acceder al dashboard.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - documentNumber
+                - password
+              properties:
+                documentNumber:
+                  type: string
+                  description: Número de documento del supervisor.
+                  example: "12345678"
+                password:
+                  type: string
+                  format: password
+                  example: "password123"
+      responses:
+        "200":
+          description: Login exitoso. Retorna JWT + datos del supervisor.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  token:
+                    type: string
+                    example: "eyJhbGciOiJIUzI1NiIsInR..."
+                  supervisor:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      documentNumber:
+                        type: string
+                      name:
+                        type: string
+        "401":
+          description: Credenciales incorrectas.
+
+  # ─────────────────────────────────────────────
+  # DASHBOARD (protegido)
+  # ─────────────────────────────────────────────
+  /api/dashboard/stats:
+    get:
+      tags: [Dashboard]
+      summary: Estadísticas del sistema
+      description: Conteo total de reportes por estado. Requiere JWT.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Conteos del dashboard.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  stats:
+                    type: object
+                    properties:
+                      total:
+                        type: integer
+                      success:
+                        type: integer
+                      pending:
+                        type: integer
+                      processing:
+                        type: integer
+                      error:
+                        type: integer
+                      downloaded:
+                        type: integer
+
+  /api/dashboard/reports:
+    get:
+      tags: [Dashboard]
+      summary: Historial de reportes (paginado)
+      description: Lista paginada de solicitudes con filtro de búsqueda. Requiere JWT.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 10
+        - in: query
+          name: search
+          schema:
+            type: string
+          description: Buscar por nombre o documento del contratista
+      responses:
+        "200":
+          description: Lista paginada de reportes.
+
+  # ─────────────────────────────────────────────
+  # SUPERVISORES
+  # ─────────────────────────────────────────────
+  /api/supervisors/list:
+    get:
+      tags: [Supervisores]
+      summary: Listar supervisores (público)
+      description: |
+        Retorna la lista de supervisores disponibles (solo nombre e ID).
+        Se usa en el formulario público para que el contratista seleccione su supervisor.
+      responses:
+        "200":
+          description: Lista de supervisores.
+
+  /api/supervisors/profile:
+    get:
+      tags: [Supervisores]
+      summary: Obtener perfil del supervisor
+      description: Retorna los datos del supervisor autenticado. Requiere JWT.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Datos del perfil.
+    put:
+      tags: [Supervisores]
+      summary: Actualizar perfil del supervisor
+      description: Permite al supervisor actualizar su contraseña. Requiere JWT.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                password:
+                  type: string
+                  format: password
+      responses:
+        "200":
+          description: Perfil actualizado.
+
+  # ─────────────────────────────────────────────
+  # SISTEMA
+  # ─────────────────────────────────────────────
+  /api/system/cron/status:
+    get:
+      tags: [Sistema]
+      summary: Estado del cron de scraping
+      description: Indica si el cron automático está habilitado o deshabilitado.
+      responses:
+        "200":
+          description: Estado actual del cron.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  enabled:
+                    type: boolean
+                  message:
+                    type: string
+
+  /api/system/cron/toggle:
+    post:
+      tags: [Sistema]
+      summary: Habilitar o deshabilitar el cron
+      description: Controla manualmente si el cron ejecuta los scrapers automáticamente.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - enabled
+              properties:
+                enabled:
+                  type: boolean
+                  description: "`true` para habilitar, `false` para deshabilitar."
+      responses:
+        "200":
+          description: Estado actualizado.
+
+  /api/health:
+    get:
+      tags: [Sistema]
+      summary: Health check
+      description: Verifica que el servidor esté corriendo correctamente.
+      responses:
+        "200":
+          description: Servidor OK.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "ok"
+                  timestamp:
+                    type: string
+                    format: date-time
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
