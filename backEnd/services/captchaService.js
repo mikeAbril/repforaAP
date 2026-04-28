@@ -4,11 +4,9 @@ import fs from "fs";
 /**
  * Utilidad para resolver captchas usando el servicio 2Captcha
  */
-export const solveCaptchaWith2Captcha = async (imagePath) => {
-    const apiKey = process.env.TWOCAPTCHA_API_KEY;
-
+export const solveCaptchaWith2Captcha = async (imagePath, apiKey) => {
     if (!apiKey) {
-        console.warn("   ⚠️  TWOCAPTCHA_API_KEY no configurado en el entorno.");
+        console.warn("   ⚠️  API Key de 2Captcha no proporcionada.");
         return { success: false, error: "API Key missing" };
     }
 
@@ -44,11 +42,9 @@ export const solveCaptchaWith2Captcha = async (imagePath) => {
  * @param {string} url - URL de la página donde está el captcha
  * @param {string} siteKey - Site Key del reCAPTCHA
  */
-export const solveRecaptchaV2 = async (url, siteKey) => {
-    const apiKey = process.env.TWOCAPTCHA_API_KEY;
-
+export const solveRecaptchaV2 = async (url, siteKey, apiKey) => {
     if (!apiKey) {
-        console.warn("   ⚠️  TWOCAPTCHA_API_KEY no configurado.");
+        console.warn("   ⚠️  API Key de 2Captcha no proporcionada.");
         return { success: false, error: "API Key missing" };
     }
 

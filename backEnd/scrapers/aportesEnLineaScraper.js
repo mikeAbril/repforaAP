@@ -7,7 +7,7 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const solver = new Solver(process.env.TWOCAPTCHA_API_KEY);
+// const solver = new Solver(process.env.TWOCAPTCHA_API_KEY); // Movido adentro
 
 const APORTES_FORM_URL = "https://empresas.aportesenlinea.com/Autoservicio/CertificadoAportes.aspx";
 const SITE_KEY = "6Lc6FDMUAAAAAKwQX0_xF92Z1MiUXm4sYbQ6bh6J";
@@ -21,8 +21,14 @@ const DOC_LABEL_MAP = {
 
 export const scrapeAportesEnLinea = async (report, downloadDir) => {
     const { instructor, platformData } = report;
-    const { documentType, documentNumber, eps, fullName, documentIssueDate } = instructor;
+    const { documentType, documentNumber, eps, fullName, documentIssueDate, apiKey } = instructor;
     const { mesIni, anioIni, mesFin, anioFin, fechaExpedicion } = platformData; 
+
+    if (!apiKey) {
+        return { success: false, error: "API Key de 2Captcha no encontrada en el perfil del supervisor." };
+    }
+
+    const solver = new Solver(apiKey);
     
     const finalFechaExp = fechaExpedicion || (documentIssueDate ? new Date(documentIssueDate).toISOString().split('T')[0] : null);
     // Si no vienen rangos, usamos el mes/año base para "desde" y "hasta"

@@ -7,7 +7,7 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const solver = new Solver(process.env.TWOCAPTCHA_API_KEY);
+// const solver = new Solver(process.env.TWOCAPTCHA_API_KEY); // Movido adentro de la función
 
 const ASOPAGOS_FORM_URL = "https://www.enlace-apb.com/interssi/descargarCertificacionPago.jsp";
 
@@ -34,8 +34,14 @@ const DOC_LABEL_MAP = {
  */
 export const scrapeAsopagos = async (report, downloadDir) => {
     const { instructor, platformData } = report;
-    const { documentType, documentNumber, fullName } = instructor;
+    const { documentType, documentNumber, fullName, apiKey } = instructor;
     const { mes, anio } = platformData;
+
+    if (!apiKey) {
+        return { success: false, error: "El supervisor asociado no tiene una API Key de 2Captcha configurada." };
+    }
+
+    const solver = new Solver(apiKey);
 
     let browser = null;
     const MAX_RETRIES = 5; // Reducimos intentos ya que 2Captcha es más preciso

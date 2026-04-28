@@ -4,6 +4,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import bcrypt from "bcryptjs";
 import Supervisor from "../models/Supervisor.js";
+import { encrypt } from "../utils/crypto.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -31,7 +32,7 @@ const createSupervisor = async (name, documentType, documentNumber, email, passw
             documentNumber: documentNumber.trim(),
             email: email.trim(),
             password: hashedPassword,
-            apiKey: apiKey ? apiKey.trim() : null
+            apiKey: apiKey ? encrypt(apiKey.trim()) : null
         });
 
         await supervisor.save();
