@@ -64,4 +64,38 @@ Este documento detalla el progreso actual del proyecto según los nuevos requeri
 
 ---
 
+## 🔄 Cambios Recientes (Frontend)
+
+### 1. Flujo simplificado: Landing Page + Modal
+Se eliminó la pantalla de selección de rol (supervisor/contratista) y se unificó en una sola vista:
+- **`CardTest.vue`**: Pantalla de inicio con una única tarjeta "Planillas" y un botón "VER".
+- **`FormModal.vue`**: Al presionar "VER" se abre un modal con el formulario de solicitud de certificado, donde el usuario selecciona la plataforma (SOI, ASOPAGOS, COMPENSAR, APORTES EN LINEA) y completa los campos dinámicos correspondientes.
+
+### 2. Corrección de `v-model` en props (Vue 3)
+En `FormModal.vue` se corrigió el error `v-model cannot be used on a prop`:
+```vue
+<!-- Antes (error) -->
+<q-dialog v-model="modelValue">
+<!-- Después (correcto) -->
+<q-dialog :model-value="modelValue" @update:model-value="val => { if (!val) closeModal() }">
+```
+
+### 3. Rediseño de la tarjeta de inicio
+La tarjeta en `CardTest.vue` fue rediseñada siguiendo el estilo de `ejemplo.png`:
+- Barra de encabezado verde con título "Planillas".
+- Área de contenido blanco con la ilustración `card.png` centrada.
+- Botón "VER" verde con degradado en la parte inferior.
+- Bordes redondeados y sombra sutil con efecto hover.
+
+### 4. Ajustes del modal (`FormModal.vue`)
+- Ancho: **60vw** | Alto: **97vh**
+- Barra superior mejorada: logo SENA + título + subtítulo + botón cerrar con mejor espaciado.
+
+### 5. Rutas (`routes.js`)
+- `/` → `CardTest.vue` (página principal)
+- `/login` → `LoginView.vue`
+- `/supervisor` → `SupervisorView.vue` (requiere autenticación)
+
+---
+
 > **Nota para el desarrollador:** He revisado tu código y aunque comentaste tener listo `crypto.js` y modificado el `supervisorController.js` y `captchaService.js`, esos cambios **aún no están reflejados ni guardados en los archivos del proyecto** (están tal cual estaban originalmente o no existen). Te sugiero que guardes/sincronices los cambios, o bien, si deseas que yo genere el código para `crypto.js` y las adecuaciones a los servicios, házmelo saber para empezar a escribirlo.
