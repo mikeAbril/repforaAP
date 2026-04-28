@@ -14,33 +14,53 @@ Este documento detalla el progreso actual del proyecto según los nuevos requeri
 ## 🚧 Lo que falta por hacer (To-Do)
 
 ### 1. Seguridad y Cifrado de la API Key
-- [ ] **Crear `backEnd/utils/crypto.js`**: Implementar la utilidad de cifrado/descifrado (AES-256). *(Nota: Actualmente el archivo no existe en la carpeta `utils` a pesar de la intención).*
+
+- [ ] **Crear `backEnd/utils/crypto.js`**: Implementar la utilidad de cifrado/descifrado (AES-256). _(Nota: Actualmente el archivo no existe en la carpeta `utils` a pesar de la intención)._
 - [ ] **Ajustar el Modelo `Supervisor`**: Para usar AES-256 correctamente de forma segura, el modelo `Supervisor` debería guardar también el "IV" (Vector de Inicialización) junto con el `apiKey` cifrado.
 - [ ] **Ajustar `supervisorController.js`**: Implementar el cifrado del `apiKey` cuando se guarde en el perfil de base de datos.
 - [ ] **Ajustar `captchaService.js`**: Recuperar el `apiKey` del supervisor según el reporte, descifrarlo usando `crypto.js` y usarlo en lugar de recuperar la llave de `process.env.TWOCAPTCHA_API_KEY`.
 
 ### 2. Flujo de Onboarding y Autenticación
+
 - [ ] **Contraseña por defecto**: Asegurar que en el script de creación o lógica de registro el password inicial sea igual al `documentNumber`.
 - [ ] **Forzar cambio de contraseña**: Agregar un flag (ej. `requiresPasswordChange`) en `Supervisor`. Al iniciar sesión, retornar un estado que obligue al frontend a mostrar la pantalla de cambio de clave.
 - [ ] **Obligar ingreso de API Key**: Validar y forzar que el supervisor ingrese su clave de 2Captcha en el mismo modal de primer login si no la tiene configurada.
 
 ### 3. Validaciones de la API Key en el Backend
+
 - [ ] **Endpoint de Validación**: Antes de guardar el `apiKey` introducido por el usuario, el backend debe realizar una petición GET a la API de balance de 2Captcha (`https://2captcha.com/res.php?key=YOUR_API_KEY&action=getbalance`) para asegurar que la llave es válida y tiene saldo.
 
 ### 4. Accesos Públicos de Google Drive
+
 - [ ] **Ajustar `driveService.js`**: Tras la subida del PDF, consumir la API de Drive para manipular los permisos del archivo subido haciéndolo público (rol `reader`, tipo `anyone`), garantizando que la URL del dashboard sea accesible sin tener que iniciar sesión en Google.
 
 ### 5. Interfaz de Tabla de Certificados (Frontend Vue)
+
 - [ ] **Nuevos Filtros**: Modificar el componente de datos para incluir filtros por **Mes**, **Año** y **Plataforma**.
 - [ ] **Botón Screenshot**: Añadir una funcionalidad para hacer captura de la tabla filtrada (usando bibliotecas como `html2canvas`).
 - [ ] **Columna "Resolución"**: Indicar si el certificado fue obtenido de manera "Automática" o "Manual".
 
 ### 6. Modo Manual (Bypass del Scraper)
+
 - [ ] **Ajustar el Botón de Acción**: En caso de fallo o ausencia de saldo/clave en 2Captcha, el supervisor puede accionar un botón "Resolver Manual".
 - [ ] **Trigger Headless**: Modificar el endpoint del runner o scraper en el backend para poder aceptar un flag `manual: true`, que fuerce `headless: false` de Playwright, levantando el Chromium en la máquina (requiere consideraciones especiales si esto corre en un VPS/Servidor).
 
 ### 7. Validaciones Finales en Reportes
+
 - [ ] **Integridad de Estado**: Agregar lógica en las validaciones u on-save hooks de Mongoose para impedir que un reporte pase a estado "Completado" (o `downloaded`) si el campo `driveUrl` está vacío.
+
+### 8. Implementación de Notificaciones (Nodemailer)
+
+- [ ] Crear backEnd/utils/mailer.js: Implementar un utilitario centralizado para el envío de correos electrónicos utilizando la librería Nodemailer.
+- [ ] Función Universal de Envío: Desarrollar una única función exportable que simplifique el proceso, requiriendo exclusivamente tres parámetros:
+
+- to: Correo del destinatario.
+
+- subject: Asunto del mensaje.
+
+- htmlContent: Cuerpo del mensaje (soporte para HTML/Texto).
+
+- [ ] Configuración por Variables de Entorno: El transportador (transporter) debe estar preconfigurado para leer el host, puerto y credenciales (user/pass) desde el archivo .env, permitiendo que la función se llame desde cualquier controlador (como en el onboarding o reportes) con una sola línea de código.
 
 ---
 
