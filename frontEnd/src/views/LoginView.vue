@@ -39,6 +39,24 @@
               </header>
 
               <div class="field-group">
+                <label class="field-label">Tipo de Documento</label>
+                <q-select 
+                  outlined 
+                  v-model="documentType" 
+                  :options="['CC', 'CE', 'PA', 'TI', 'CD', 'PE', 'PT', 'RC', 'SC']"
+                  placeholder="Seleccione tipo"
+                  class="premium-input"
+                  dense
+                  lazy-rules
+                  :rules="[val => val && val.length > 0 || 'Campo obligatorio']"
+                >
+                  <template v-slot:prepend>
+                    <q-icon name="badge" color="grey-6" />
+                  </template>
+                </q-select>
+              </div>
+
+              <div class="field-group">
                 <label class="field-label">Número de Documento</label>
                 <q-input 
                   outlined 
@@ -122,6 +140,7 @@ import { useQuasar } from 'quasar'
 import { useAuthStore } from '@/store/auth'
 import { postData } from '@/services/apiClient'
 
+const documentType = ref('CC')
 const documentNumber = ref('')
 const password = ref('')
 const showPassword = ref(false)
@@ -134,6 +153,7 @@ const onSubmit = async () => {
   loading.value = true
   try {
     const response = await postData('/auth/login', {
+      documentType: documentType.value,
       documentNumber: documentNumber.value,
       password: password.value
     })
