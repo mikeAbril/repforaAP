@@ -37,6 +37,14 @@ const supervisorSchema = new Schema(
             default: null,
             trim: true,
         },
+        mustChangePassword: {
+            type: Boolean,
+            default: true,
+        },
+        isConfigured: {
+            type: Boolean,
+            default: false,
+        },
     },
     {
         timestamps: true,

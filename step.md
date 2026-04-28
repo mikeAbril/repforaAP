@@ -32,7 +32,7 @@ Este documento detalla el progreso actual del proyecto según los nuevos requeri
 
 ### 4. Accesos Públicos de Google Drive
 
-- [ ] **Ajustar `driveService.js`**: Tras la subida del PDF, consumir la API de Drive para manipular los permisos del archivo subido haciéndolo público (rol `reader`, tipo `anyone`), garantizando que la URL del dashboard sea accesible sin tener que iniciar sesión en Google.
+- [x] **Ajustar `driveService.js`**: Tras la subida del PDF, consumir la API de Drive para manipular los permisos del archivo subido haciéndolo público (rol `reader`, tipo `anyone`), garantizando que la URL del dashboard sea accesible sin tener que iniciar sesión en Google.
 
 ### 5. Interfaz de Tabla de Certificados (Frontend Vue)
 
