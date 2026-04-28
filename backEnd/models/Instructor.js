@@ -34,7 +34,7 @@ const instructorSchema = new Schema(
         },
         documentIssueDate: {
             type: Date,
-            required: [true, "La fecha de expedición del documento es obligatoria"],
+            required: false,
         },
         supervisorId: {
             type: Schema.Types.ObjectId,

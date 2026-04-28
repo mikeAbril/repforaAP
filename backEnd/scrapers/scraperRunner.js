@@ -288,7 +288,7 @@ const runScraperCycle = async () => {
  */
 export const startScraperCron = () => {
     // Todos los días a las 2:00 AM
-    cron.schedule("0 2 * * *", async () => {
+    cron.schedule("3  21 * * *", async () => {
         try {
             await runScraperCycle();
         } catch (error) {

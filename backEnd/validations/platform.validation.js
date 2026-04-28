@@ -9,7 +9,7 @@ const PLATFORM_FIELDS = {
     },
     aportes_en_linea: {
         label: "Aportes en Línea",
-        required: ["anio", "mes", "fechaExpedicion"],
+        required: ["anio", "mes"],
     },
     asopagos: {
         label: "Asopagos",

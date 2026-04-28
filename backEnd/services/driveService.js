@@ -271,7 +271,18 @@ export const uploadToDrive = async (localFilePath, fullName, year, month, docume
         const driveFileId = file.data.id;
         const driveUrl = file.data.webViewLink;
 
-        console.log(`   ✅ Subido a Drive: ${supervisorName || "RAIZ"}/${year}/${monthFolderName}/${fileName}`);
+        // === NUEVO: Configurar permisos públicos ===
+        console.log(`   🔒 Configurando permisos públicos...`);
+        await drive.permissions.create({
+            fileId: driveFileId,
+            requestBody: {
+                role: "reader",
+                type: "anyone",
+            },
+        });
+        // ===========================================
+
+        console.log(`   ✅ Subido a Drive (Público): ${supervisorName || "RAIZ"}/${year}/${monthFolderName}/${fileName}`);
         const shortUrl = (driveUrl || "").split("&")[0]; // Limpiar URL
         console.log(`   🔗 ${shortUrl}`);
 
