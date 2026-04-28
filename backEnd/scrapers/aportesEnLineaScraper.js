@@ -20,10 +20,11 @@ const DOC_LABEL_MAP = {
 };
 
 export const scrapeAportesEnLinea = async (report, downloadDir) => {
-    const { contractor, platformData } = report;
-    const { documentType, documentNumber, eps, fullName } = contractor;
+    const { instructor, platformData } = report;
+    const { documentType, documentNumber, eps, fullName, documentIssueDate } = instructor;
     const { mesIni, anioIni, mesFin, anioFin, fechaExpedicion } = platformData; 
     
+    const finalFechaExp = fechaExpedicion || (documentIssueDate ? new Date(documentIssueDate).toISOString().split('T')[0] : null);
     // Si no vienen rangos, usamos el mes/año base para "desde" y "hasta"
     const startMes = mesIni || platformData.mes;
     const startAnio = anioIni || platformData.anio;
@@ -123,10 +124,10 @@ export const scrapeAportesEnLinea = async (report, downloadDir) => {
                      await randomDelay(800, 1200);
                 }
 
-                // Fecha de Expedición (viene del platformData)
-                if (fechaExpedicion) {
+                // Fecha de Expedición (viene del instructor o platformData)
+                if (finalFechaExp) {
                      // Las máscaras de fecha suelen causar problemas con tipeo humano char por char. Mejor inyectar directo o fill rápido.
-                     await page.fill("input#contenido_txtFechaExp", fechaExpedicion);
+                     await page.fill("input#contenido_txtFechaExp", finalFechaExp);
                      await randomDelay(500, 800);
                      // Disparamos evento change por si acaso
                      await page.evaluate(() => {

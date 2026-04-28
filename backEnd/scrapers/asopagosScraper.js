@@ -33,8 +33,8 @@ const DOC_LABEL_MAP = {
  * @param {string} downloadDir - Directorio de descargas
  */
 export const scrapeAsopagos = async (report, downloadDir) => {
-    const { contractor, platformData } = report;
-    const { documentType, documentNumber, fullName } = contractor;
+    const { instructor, platformData } = report;
+    const { documentType, documentNumber, fullName } = instructor;
     const { mes, anio } = platformData;
 
     let browser = null;

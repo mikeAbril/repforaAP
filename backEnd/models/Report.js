@@ -2,10 +2,10 @@ import { Schema, model } from "mongoose";
 
 const reportSchema = new Schema(
     {
-        contractorId: {
+        instructorId: {
             type: Schema.Types.ObjectId,
-            ref: "Contractor",
-            required: [true, "El ID del contratista es obligatorio"],
+            ref: "Instructor",
+            required: [true, "El ID del instructor es obligatorio"],
         },
         supervisorId: {
             type: Schema.Types.ObjectId,

@@ -5,7 +5,7 @@ import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
 import Report from "../models/Report.js";
-import Contractor from "../models/Contractor.js";
+import Instructor from "../models/Instructor.js";
 import Supervisor from "../models/Supervisor.js";
 import { scrapeSoi } from "./soiScraper.js";
 import { scrapeAportesEnLinea } from "./aportesEnLineaScraper.js";
@@ -101,19 +101,21 @@ const processPendingReports = async (platform) => {
             currentReport.attempts = (currentReport.attempts || 0) + 1;
             await currentReport.save();
 
-            // Obtener datos del contratista
-            const contractor = await Contractor.findById(report.contractorId);
-            if (!contractor) {
-                throw new Error(`Contratista ${report.contractorId} no encontrado`);
+            // Obtener datos del instructor
+            const instructor = await Instructor.findById(report.instructorId);
+            if (!instructor) {
+                throw new Error(`Instructor ${report.instructorId} no encontrado`);
             }
 
             // Preparar datos para el scraper
             const reportData = {
-                contractor: {
-                    documentType: contractor.documentType,
-                    documentNumber: contractor.documentNumber,
-                    eps: contractor.eps,
-                    fullName: contractor.fullName,
+                instructor: {
+                    documentType: instructor.documentType,
+                    documentNumber: instructor.documentNumber,
+                    eps: instructor.eps,
+                    fullName: instructor.fullName,
+                    email: instructor.email,
+                    documentIssueDate: instructor.documentIssueDate,
                 },
                 platformData: report.platformData,
             };
@@ -147,11 +149,11 @@ const processPendingReports = async (platform) => {
 
                     const driveResult = await uploadToDrive(
                         result.filePath,
-                        contractor.fullName,
+                        instructor.fullName,
                         finalAnio,
                         finalMes,
-                        contractor.documentType,
-                        contractor.documentNumber,
+                        instructor.documentType,
+                        instructor.documentNumber,
                         supervisorName
                     );
 

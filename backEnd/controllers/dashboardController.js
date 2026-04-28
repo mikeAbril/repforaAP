@@ -1,5 +1,5 @@
 import Report from "../models/Report.js";
-import Contractor from "../models/Contractor.js";
+import Instructor from "../models/Instructor.js";
 
 /**
  * GET /api/dashboard/reports
@@ -42,15 +42,15 @@ export const getReports = async (req, res, next) => {
         // Búsqueda por contratista (nombre o documento)
         if (search) {
             const searchRegex = new RegExp(search, "i");
-            const matchingContractors = await Contractor.find({
+            const matchingInstructors = await Instructor.find({
                 $or: [
                     { fullName: searchRegex },
                     { documentNumber: searchRegex }
                 ]
             }).select("_id");
             
-            const contractorIds = matchingContractors.map(c => c._id);
-            filter.contractorId = { $in: contractorIds };
+            const instructorIds = matchingInstructors.map(c => c._id);
+            filter.instructorId = { $in: instructorIds };
         }
 
         // Filtrar por mes/año usando createdAt
@@ -82,7 +82,7 @@ export const getReports = async (req, res, next) => {
                 .sort({ createdAt: -1 })
                 .skip(skip)
                 .limit(limitNum)
-                .populate("contractorId", "documentType documentNumber fullName eps")
+                .populate("instructorId", "documentType documentNumber fullName eps email documentIssueDate")
                 .lean(),
             Report.countDocuments(filter),
         ]);

@@ -6,7 +6,7 @@ info:
     de seguridad social (SOI, Asopagos, Mi Planilla, Aportes en Línea).
 
     ## Flujo General
-    1. El **contratista** envía un formulario público (POST /api/reports).
+    1. El **instructor** envía un formulario público (POST /api/reports).
     2. El **scraper** (cron a las 2:00 AM o manual) procesa los reportes pendientes.
     3. Si el scraper descarga el PDF exitosamente, lo **sube a Google Drive**.
     4. El **supervisor** consulta el estado de las solicitudes desde el dashboard.
@@ -53,12 +53,14 @@ paths:
                 - documentNumber
                 - fullName
                 - eps
+                - email
+                - documentIssueDate
                 - platform
                 - platformData
               properties:
                 documentType:
                   type: string
-                  enum: [CC, CE, PA, TI]
+                  enum: [CC, CE, PA, TI, CD, PE, PT, RC, SC]
                   description: Tipo de documento de identidad.
                 documentNumber:
                   type: string
@@ -66,8 +68,17 @@ paths:
                   example: "37898093"
                 fullName:
                   type: string
-                  description: Nombre completo del contratista.
+                  description: Nombre completo del instructor.
                   example: "MONICA YANETH BARRERA BALLESTEROS"
+                email:
+                  type: string
+                  description: Correo electrónico del instructor.
+                  example: "instructor@sena.edu.co"
+                documentIssueDate:
+                  type: string
+                  format: date
+                  description: Fecha de expedición del documento (AAAA-MM-DD).
+                  example: "2010-05-20"
                 eps:
                   type: string
                   description: Nombre de la EPS. Usar "N/A" si la plataforma no lo exige.
@@ -132,9 +143,15 @@ paths:
             schema:
               type: object
               required:
+                - documentType
                 - documentNumber
                 - password
               properties:
+                documentType:
+                  type: string
+                  enum: [CC, CE, PA, TI, CD, PE, PT, RC, SC]
+                  description: Tipo de documento del supervisor.
+                  example: "CC"
                 documentNumber:
                   type: string
                   description: Número de documento del supervisor.
@@ -162,10 +179,17 @@ paths:
                     properties:
                       id:
                         type: string
+                      documentType:
+                        type: string
                       documentNumber:
                         type: string
                       name:
                         type: string
+                      email:
+                        type: string
+                      apiKey:
+                        type: string
+                        nullable: true
         "401":
           description: Credenciales incorrectas.
 
@@ -227,7 +251,7 @@ paths:
           name: search
           schema:
             type: string
-          description: Buscar por nombre o documento del contratista
+          description: Buscar por nombre o documento del instructor
       responses:
         "200":
           description: Lista paginada de reportes.
@@ -241,7 +265,7 @@ paths:
       summary: Listar supervisores (público)
       description: |
         Retorna la lista de supervisores disponibles (solo nombre e ID).
-        Se usa en el formulario público para que el contratista seleccione su supervisor.
+        Se usa en el formulario público para que el instructor seleccione su supervisor.
       responses:
         "200":
           description: Lista de supervisores.
