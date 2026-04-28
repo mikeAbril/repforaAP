@@ -1,23 +1,24 @@
 <template>
   <q-dialog
     :model-value="modelValue"
-    maximized
     transition-show="slide-up"
     transition-hide="slide-down"
+    persistent
     @update:model-value="val => { if (!val) closeModal() }"
   >
     <q-card class="form-modal-card">
-      <q-bar class="bg-primary text-white modal-bar">
-        <div class="bar-logo">
-          <img src="@/assets/logo-sena.png" alt="SENA" class="bar-logo-img" />
+      <q-card-section class="bg-green-9 q-px-lg">
+        <div class="row items-center q-py-sm">
+          <div class="bar-logo">
+            <img src="@/assets/logo-sena.png" alt="SENA" class="bar-logo-img" />
+          </div>
+          <div class="col text-center">
+            <h5 class="q-ma-none text-white text-weight-bold text-uppercase">Solicitud de Certificado</h5>
+            <span class="dialog-subtitle">Seguridad Social</span>
+          </div>
+          <q-btn dense flat round icon="close" size="sm" class="text-white" @click="closeModal" />
         </div>
-        <div class="bar-title">
-          <span class="bar-title-main">Solicitud de Certificado</span>
-          <span class="bar-title-sub">Seguridad Social</span>
-        </div>
-        <q-space />
-        <q-btn dense flat icon="close" @click="closeModal" />
-      </q-bar>
+      </q-card-section>
 
       <q-card-section class="modal-body q-pa-md">
         <q-form @submit="onSubmit" class="q-gutter-y-md">
@@ -25,7 +26,7 @@
           <!-- Sección: Selección de Plataforma -->
           <div class="form-section-container">
             <div class="section-header q-mb-sm">
-              <q-icon name="cloud_queue" color="primary" size="xs" class="q-mr-sm" />
+              <span class="material-symbols-outlined q-mr-sm" style="font-size: 20px; color: var(--color_button)">cloud_queue</span>
               <span class="section-label">Plataforma de Seguridad Social</span>
             </div>
             <div class="row q-col-gutter-md">
@@ -33,15 +34,14 @@
                 <div class="field-group">
                   <label class="field-label">Seleccione la plataforma</label>
                   <q-select
-                    outlined
+                    filled
                     v-model="selectedPlatform"
                     :options="platformOptions"
                     label="Seleccione una plataforma..."
-                    color="primary"
                     dense
                     emit-value
                     map-options
-                    class="premium-input"
+                    class="style-select"
                     @update:model-value="onPlatformChange"
                   />
                 </div>
@@ -57,7 +57,7 @@
               class="form-section-container fade-in"
             >
               <div class="section-header q-mb-sm">
-                <q-icon :name="section.icon" color="primary" size="xs" class="q-mr-sm" />
+                <span class="material-symbols-outlined q-mr-sm" style="font-size: 20px; color: var(--color_button)">{{ section.icon }}</span>
                 <span class="section-label">{{ section.title }}</span>
               </div>
 
@@ -72,11 +72,10 @@
 
                     <q-select
                       v-if="field.type === 'select'"
-                      outlined
+                      filled
                       v-model="formData[field.name]"
                       :options="filteredOptions[field.name] || getOptions(field.options)"
                       :label="formData[field.name] ? undefined : 'Seleccione una opción...'"
-                      color="primary"
                       dense
                       emit-value
                       map-options
@@ -86,13 +85,16 @@
                       :new-value-mode="field.allowNewValue ? 'add-unique' : undefined"
                       @new-value="(val, done) => { if (field.allowNewValue) done(val, 'add-unique') }"
                       lazy-rules
-                      :rules="[val => (val !== null && val !== undefined && val !== '') || 'Este campo es obligatorio']"
-                      class="premium-input"
+                      :rules="[val => (val !== null && val !== undefined && val !== '') || 'El campo es requerido']"
+                      class="style-select"
                     >
+                      <template v-slot:prepend>
+                        <span class="material-symbols-outlined" style="font-size: 20px">{{ getIcon(field.name) }}</span>
+                      </template>
                       <template v-slot:no-option>
                         <q-item>
                           <q-item-section class="text-grey">
-                            {{ field.allowNewValue ? 'Presione Enter para usar este valor' : 'No hay resultados' }}
+                            {{ field.allowNewValue ? 'Presione Enter para usar este valor' : 'Sin registros aún' }}
                           </q-item-section>
                         </q-item>
                       </template>
@@ -100,21 +102,23 @@
 
                     <q-input
                       v-else-if="field.type === 'input'"
-                      outlined
+                      filled
                       v-model="formData[field.name]"
                       :placeholder="field.mask ? undefined : 'Ingrese el valor...'"
-                      color="primary"
                       dense
                       :type="field.isNumber ? 'tel' : 'text'"
                       :mask="field.mask"
                       @keypress="field.isNumber && !field.mask ? (e) => { if (!/[0-9]/.test(e.key)) e.preventDefault(); } : null"
                       lazy-rules
                       :rules="[
-                        val => (val !== null && val !== undefined && val !== '') || 'Este campo es obligatorio',
+                        val => (val !== null && val !== undefined && val !== '') || 'El campo es requerido',
                         val => !field.isNumber || field.mask || /^\d+$/.test(val) || 'Solo se permiten números'
                       ]"
-                      class="premium-input"
-                    />
+                    >
+                      <template v-slot:prepend>
+                        <span class="material-symbols-outlined" style="font-size: 20px">{{ getIcon(field.name) }}</span>
+                      </template>
+                    </q-input>
                   </div>
                 </div>
               </div>
@@ -125,17 +129,12 @@
           <div class="q-mt-md row justify-center">
             <q-btn
               type="submit"
-              color="primary"
-              class="submit-btn-premium"
+              class="bg-green-9 text-white q-px-xl"
+              label="Enviar Solicitud"
               unelevated
               :loading="isSubmitting"
               :disable="!selectedPlatform"
-            >
-              <div class="row items-center no-wrap">
-                <span class="q-mr-md">Enviar Solicitud</span>
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polyline points="22 2 15 22 11 13 2 9 22 2"/></svg>
-              </div>
-            </q-btn>
+            />
           </div>
 
         </q-form>
@@ -176,6 +175,24 @@ const currentConfig = computed(() => {
 const formData = reactive({});
 const filteredOptions = reactive({});
 const supervisorsList = ref([]);
+
+const iconMap = {
+  documentType: 'badge',
+  documentNumber: 'pin',
+  fullName: 'person',
+  eps: 'local_hospital',
+  mes: 'calendar_month',
+  anio: 'event',
+  supervisorId: 'supervised_user_circle',
+  numeroPlanilla: 'receipt_long',
+  valorPagado: 'payments',
+  fechaPagoDia: 'calendar_today',
+  fechaPagoMes: 'date_range',
+  fechaPagoAnio: 'event_available',
+  fechaExpedicion: 'edit_calendar'
+};
+
+const getIcon = (fieldName) => iconMap[fieldName] || 'input';
 
 const fetchSupervisors = async () => {
   try {
@@ -293,35 +310,27 @@ const onSubmit = async () => {
 </script>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-
 .form-modal-card {
-  font-family: 'Inter', sans-serif;
   width: 100%;
-  max-width: 900px;
-  background: #f8fafc;
+  max-width: 60vw;
+  max-height: 97vh;
+  background: var(--bg-light);
   display: flex;
   flex-direction: column;
-  max-height: 100vh;
-  border-radius: 0;
-}
-
-.modal-bar {
-  padding: 0.5rem 1rem;
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
+  border-radius: var(--radius);
+  overflow: hidden;
 }
 
 .bar-logo {
-  width: 36px;
-  height: 36px;
-  background: white;
+  width: 42px;
+  height: 42px;
+  background: var(--white);
   border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 4px;
+  padding: 6px;
+  flex-shrink: 0;
 }
 
 .bar-logo-img {
@@ -330,20 +339,9 @@ const onSubmit = async () => {
   object-fit: contain;
 }
 
-.bar-title {
-  display: flex;
-  flex-direction: column;
-}
-
-.bar-title-main {
-  font-size: 0.95rem;
-  font-weight: 800;
-  line-height: 1.2;
-}
-
-.bar-title-sub {
-  font-size: 0.6rem;
-  font-weight: 800;
+.dialog-subtitle {
+  font-size: 0.65rem;
+  font-weight: 700;
   color: rgba(255,255,255,0.7);
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -356,9 +354,9 @@ const onSubmit = async () => {
 }
 
 .form-section-container {
-  background: white;
-  border: 1px solid #f1f5f9;
-  border-radius: 16px;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
   padding: 1rem;
   margin-bottom: 1rem;
 }
@@ -366,7 +364,7 @@ const onSubmit = async () => {
 .section-header {
   display: flex;
   align-items: center;
-  border-bottom: 1px dashed #e2e8f0;
+  border-bottom: 1px dashed var(--border);
   padding-bottom: 0.5rem;
   margin-bottom: 1rem;
 }
@@ -376,7 +374,7 @@ const onSubmit = async () => {
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.02em;
-  color: #1e293b;
+  color: var(--text-dark);
 }
 
 .field-group {
@@ -388,49 +386,8 @@ const onSubmit = async () => {
 .field-label {
   font-size: 0.75rem;
   font-weight: 700;
-  color: #64748b;
+  color: var(--text-muted);
   margin-left: 0.25rem;
-}
-
-:deep(.premium-input .q-field__control) {
-  border-radius: 10px !important;
-  background-color: #f8fafc;
-  transition: all 0.2s ease;
-  height: 40px !important;
-  min-height: 40px !important;
-}
-
-:deep(.premium-input .q-field__control:before) {
-  border: 1px solid #e2e8f0 !important;
-}
-
-:deep(.premium-input .q-field__control:after) {
-  border-width: 2px !important;
-}
-
-:deep(.premium-input.q-field--focused .q-field__control) {
-  background-color: white;
-  box-shadow: 0 0 0 4px rgba(57, 169, 0, 0.08);
-}
-
-:deep(.premium-input .q-field__native),
-:deep(.premium-input .q-field__input) {
-  font-weight: 500;
-  color: #0f172a;
-  font-size: 0.85rem;
-}
-
-.submit-btn-premium {
-  border-radius: 12px;
-  padding: 0.6rem 2.5rem;
-  font-weight: 800;
-  font-size: 0.95rem;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.submit-btn-premium:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 15px rgba(57, 169, 0, 0.2);
 }
 
 .fade-in {
@@ -443,6 +400,6 @@ const onSubmit = async () => {
 }
 
 @media (max-width: 600px) {
-  .form-section-container { padding: 0.75rem; border-radius: 12px; }
+  .form-section-container { padding: 0.75rem; }
 }
 </style>
