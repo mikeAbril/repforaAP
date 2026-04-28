@@ -31,13 +31,13 @@ const SOI_URL = "https://servicio.nuevosoi.com.co/soi/certificadoAportesCotizant
  * 3. Seleccionar EPS, Mes, Año
  * 4. Click "Descargar PDF"
  *
- * @param {Object} report - Datos del reporte con contractor populado
+ * @param {Object} report - Datos del reporte con instructor populado
  * @param {string} downloadDir - Ruta absoluta donde guardar el PDF
  * @returns {Promise<{ success: boolean, filePath?: string, error?: string }>}
  */
 export const scrapeSoi = async (report, downloadDir) => {
-    const { contractor, platformData } = report;
-    const { documentType, documentNumber, eps } = contractor;
+    const { instructor, platformData } = report;
+    const { documentType, documentNumber, eps } = instructor;
     const { mes, anio } = platformData;
 
     if (!eps) {

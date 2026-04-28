@@ -1,12 +1,12 @@
 import { validationResult } from "express-validator";
-import Contractor from "../models/Contractor.js";
+import Instructor from "../models/Instructor.js";
 import Report from "../models/Report.js";
 import { validatePlatformData } from "../validations/platform.validation.js";
 
 /**
  * POST /api/reports
  * Endpoint público: recibe datos del formulario del contratista,
- * busca o crea el Contractor, y crea un Report con status: pending.
+ * busca o crea el Instructor, y crea un Report con status: pending.
  */
 export const submitReport = async (req, res, next) => {
     try {
@@ -19,7 +19,7 @@ export const submitReport = async (req, res, next) => {
             });
         }
 
-        const { documentType, documentNumber, fullName, eps, platform, platformData, supervisorId } = req.body;
+        const { documentType, documentNumber, fullName, eps, email, documentIssueDate, platform, platformData, supervisorId } = req.body;
 
         // 2. Validar campos específicos de la plataforma
         const platformValidation = validatePlatformData(platform, platformData);
@@ -31,10 +31,10 @@ export const submitReport = async (req, res, next) => {
             });
         }
 
-        // 3. Buscar o crear el Contractor (upsert por documentType + documentNumber)
-        const contractor = await Contractor.findOneAndUpdate(
+        // 3. Buscar o crear el Instructor (upsert por documentType + documentNumber)
+        const instructor = await Instructor.findOneAndUpdate(
             { documentType, documentNumber },
-            { fullName, eps, supervisorId },
+            { fullName, eps, email, documentIssueDate, supervisorId },
             { upsert: true, returnDocument: 'after', runValidators: true }
         );
 
@@ -56,7 +56,7 @@ export const submitReport = async (req, res, next) => {
 
         // 5. Crear el Report con status: pending
         const report = await Report.create({
-            contractorId: contractor._id,
+            instructorId: instructor._id,
             supervisorId,
             platform,
             platformData,

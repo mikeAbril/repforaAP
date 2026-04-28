@@ -21,8 +21,8 @@ const DOC_LABEL_MAP = {
 };
 
 export const scrapeMiPlanilla = async (report, downloadDir) => {
-    const { contractor, platformData } = report;
-    const { documentType, documentNumber, fullName } = contractor;
+    const { instructor, platformData } = report;
+    const { documentType, documentNumber, fullName } = instructor;
     const { numeroPlanilla, mes, anio, valorPagado } = platformData;
     const { fechaPagoDia, fechaPagoMes, fechaPagoAnio } = platformData;
 

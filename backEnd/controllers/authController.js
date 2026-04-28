@@ -18,10 +18,13 @@ export const login = async (req, res, next) => {
             });
         }
 
-        const { documentNumber, password } = req.body;
+        const { documentType, documentNumber, password } = req.body;
 
-        // Buscar supervisor por número de documento
-        const supervisor = await Supervisor.findOne({ documentNumber: documentNumber.trim() });
+        // Buscar supervisor por tipo y número de documento
+        const supervisor = await Supervisor.findOne({ 
+            documentType, 
+            documentNumber: documentNumber.trim() 
+        });
         if (!supervisor) {
             return res.status(401).json({
                 success: false,
@@ -46,8 +49,11 @@ export const login = async (req, res, next) => {
             token,
             supervisor: {
                 id: supervisor._id,
+                documentType: supervisor.documentType,
                 documentNumber: supervisor.documentNumber,
                 name: supervisor.name,
+                email: supervisor.email,
+                apiKey: supervisor.apiKey
             },
         });
     } catch (error) {

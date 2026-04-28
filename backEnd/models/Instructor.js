@@ -1,6 +1,6 @@
 import { Schema, model } from "mongoose";
 
-const contractorSchema = new Schema(
+const instructorSchema = new Schema(
     {
         documentType: {
             type: String,
@@ -26,6 +26,16 @@ const contractorSchema = new Schema(
             required: [true, "La EPS es obligatoria"],
             trim: true,
         },
+        email: {
+            type: String,
+            required: [true, "El correo es obligatorio"],
+            trim: true,
+            match: [/.+\@.+\..+/, "Por favor ingresa un correo válido"],
+        },
+        documentIssueDate: {
+            type: Date,
+            required: [true, "La fecha de expedición del documento es obligatoria"],
+        },
         supervisorId: {
             type: Schema.Types.ObjectId,
             ref: "Supervisor",
@@ -37,9 +47,9 @@ const contractorSchema = new Schema(
     }
 );
 
-// Índice compuesto único: no puede haber dos contratistas con el mismo tipo + número de documento
-contractorSchema.index({ documentType: 1, documentNumber: 1 }, { unique: true });
+// Índice compuesto único: no puede haber dos instructores con el mismo tipo + número de documento
+instructorSchema.index({ documentType: 1, documentNumber: 1 }, { unique: true });
 
-const Contractor = model("Contractor", contractorSchema);
+const Instructor = model("Instructor", instructorSchema);
 
-export default Contractor;
+export default Instructor;

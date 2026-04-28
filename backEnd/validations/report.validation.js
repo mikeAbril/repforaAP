@@ -17,6 +17,14 @@ export const submitReportValidation = [
     body("eps")
         .trim()
         .notEmpty().withMessage("La EPS es obligatoria"),
+    body("email")
+        .trim()
+        .notEmpty().withMessage("El correo es obligatorio")
+        .isEmail().withMessage("Correo electrónico no válido"),
+    body("documentIssueDate")
+        .trim()
+        .notEmpty().withMessage("La fecha de expedición del documento es obligatoria")
+        .isISO8601().withMessage("Fecha de expedición no válida (debe ser AAAA-MM-DD)"),
     body("platform")
         .trim()
         .notEmpty().withMessage("La plataforma es obligatoria")
