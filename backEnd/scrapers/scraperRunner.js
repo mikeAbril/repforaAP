@@ -13,6 +13,7 @@ import { scrapeAsopagos } from "./asopagosScraper.js";
 import { scrapeMiPlanilla } from "./miPlanillaScraper.js";
 
 import { uploadToDrive, setupSupervisorFolder, checkIfFolderExists } from "../services/driveService.js";
+import { decrypt } from "../utils/crypto.js";
  
 let isRunnerRunning = false;
 
@@ -107,6 +108,19 @@ const processPendingReports = async (platform) => {
                 throw new Error(`Instructor ${report.instructorId} no encontrado`);
             }
 
+            // Obtener el supervisor para su API Key de 2Captcha
+            let decryptedApiKey = null;
+            let supervisorName = null;
+            if (report.supervisorId) {
+                const supervisor = await Supervisor.findById(report.supervisorId);
+                if (supervisor) {
+                    supervisorName = supervisor.name;
+                    if (supervisor.apiKey) {
+                        decryptedApiKey = decrypt(supervisor.apiKey);
+                    }
+                }
+            }
+
             // Preparar datos para el scraper
             const reportData = {
                 instructor: {
@@ -116,6 +130,7 @@ const processPendingReports = async (platform) => {
                     fullName: instructor.fullName,
                     email: instructor.email,
                     documentIssueDate: instructor.documentIssueDate,
+                    apiKey: decryptedApiKey, // Enviamos la clave ya desencriptada
                 },
                 platformData: report.platformData,
             };
@@ -137,15 +152,6 @@ const processPendingReports = async (platform) => {
 
                     const finalMes = paymentMonth;
                     const finalAnio = paymentYear;
-
-                    // Obtener el nombre del supervisor para la carpeta de Drive
-                    let supervisorName = null;
-                    if (report.supervisorId) {
-                        const supervisor = await Supervisor.findById(report.supervisorId);
-                        if (supervisor) {
-                            supervisorName = supervisor.name;
-                        }
-                    }
 
                     const driveResult = await uploadToDrive(
                         result.filePath,

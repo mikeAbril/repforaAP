@@ -7,7 +7,7 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const solver = new Solver(process.env.TWOCAPTCHA_API_KEY);
+// const solver = new Solver(process.env.TWOCAPTCHA_API_KEY); // Movido adentro de la función
 
 const MI_PLANILLA_FORM_URL = "https://www.miplanilla.com/Private/Consultaplanillaindependiente.aspx";
 
@@ -22,9 +22,15 @@ const DOC_LABEL_MAP = {
 
 export const scrapeMiPlanilla = async (report, downloadDir) => {
     const { instructor, platformData } = report;
-    const { documentType, documentNumber, fullName } = instructor;
+    const { documentType, documentNumber, fullName, apiKey } = instructor;
     const { numeroPlanilla, mes, anio, valorPagado } = platformData;
     const { fechaPagoDia, fechaPagoMes, fechaPagoAnio } = platformData;
+
+    if (!apiKey) {
+        return { success: false, error: "El supervisor no tiene configurada la API Key de 2Captcha." };
+    }
+
+    const solver = new Solver(apiKey);
 
     let browser = null;
     const MAX_RETRIES = 10;
