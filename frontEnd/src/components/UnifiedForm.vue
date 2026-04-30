@@ -127,7 +127,7 @@ const config = computed(() => formConfigs[props.platform]);
 const isSubmitting = ref(false);
 
 const goBack = () => {
-  router.push('/');
+  router.push('/instructor');
 };
 
 const formData = reactive({});

@@ -129,14 +129,6 @@
             :loading="isSubmitting"
             :disable="!selectedPlatform"
           />
-          <q-btn
-            flat
-            outline
-            text-color="grey-8"
-            label="Acceso Supervisor"
-            class="q-px-xl"
-            @click="goToSupervisor"
-          />
         </div>
 
       </q-form>
@@ -149,7 +141,6 @@
 import { reactive, ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
-import { useAuthStore } from '@/store/auth';
 import { formConfigs, mesesOptions, mesesNombresOptions, aniosOptions, diasOptions } from '@/static/formConfigs';
 import { postData, getData } from '@/services/apiClient';
 
@@ -314,11 +305,6 @@ const onSubmit = async () => {
   }
 };
 
-const goToSupervisor = () => {
-  const authStore = useAuthStore();
-  authStore.clearToken();
-  router.push('/login');
-};
 </script>
 
 <style scoped>

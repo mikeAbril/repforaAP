@@ -1,6 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import MainLayout from '@/layouts/MainLayout.vue'
-import CardTest from '@/views/CardTest.vue'
+import InstructorView from '@/views/InstructorView.vue'
 import LoginView from '@/views/LoginView.vue'
 import SupervisorView from '@/views/SupervisorView.vue'
 import AdminSupervisorsView from '@/views/AdminSupervisorsView.vue'
@@ -16,7 +16,8 @@ const routes = [
         path: '/',
         component: MainLayout,
         children: [
-            { path: '', name: 'Home', component: CardTest },
+            { path: '', redirect: '/instructor' },
+            { path: 'instructor', name: 'Instructor', component: InstructorView },
             {
                 path: 'supervisor',
                 name: 'Supervisor',
