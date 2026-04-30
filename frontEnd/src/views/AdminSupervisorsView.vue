@@ -90,7 +90,7 @@
                     </template>
                   </q-input>
                 </div>
-                <div class="col-12">
+                <div class="col-12" v-if="isEditing">
                   <q-input
                     filled
                     v-model="formData.documentIssueDate"
@@ -103,6 +103,7 @@
                     </template>
                   </q-input>
                 </div>
+
                 <div class="col-12">
                   <q-input
                     filled
@@ -143,18 +144,7 @@
                     :rules="[val => !!val || 'El campo es requerido']"
                   />
                 </div>
-                <div class="col-12" v-if="!isEditing">
-                  <q-input
-                    filled
-                    v-model="formData.apiKey"
-                    label="2Captcha API Key (Opcional)"
-                    dense
-                  >
-                    <template v-slot:prepend>
-                      <span class="material-symbols-outlined">key</span>
-                    </template>
-                  </q-input>
-                </div>
+
               </div>
 
               <div class="row justify-end q-mt-md">
@@ -190,8 +180,7 @@ const formData = ref({
   documentIssueDate: '',
   name: '',
   email: '',
-  role: 'supervisor',
-  apiKey: ''
+  role: 'supervisor'
 })
 
 const columns = [
@@ -225,8 +214,7 @@ const openCreateDialog = () => {
     documentIssueDate: '',
     name: '',
     email: '',
-    role: 'supervisor',
-    apiKey: ''
+    role: 'supervisor'
   }
   showDialog.value = true
 }
@@ -240,8 +228,7 @@ const editSupervisor = (supervisor) => {
     documentIssueDate: supervisor.documentIssueDate || '',
     name: supervisor.name,
     email: supervisor.email,
-    role: supervisor.role,
-    apiKey: supervisor.apiKey || ''
+    role: supervisor.role
   }
   showDialog.value = true
 }
@@ -250,11 +237,7 @@ const saveSupervisor = async () => {
   saving.value = true
   try {
     const payload = { ...formData.value }
-
-    if (isEditing.value) {
-      delete payload.apiKey
-    }
-
+    
     let res
     if (isEditing.value) {
       res = await api.put(`/supervisors/admin/${currentId.value}`, payload)

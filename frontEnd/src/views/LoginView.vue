@@ -163,7 +163,11 @@ const onSubmit = async () => {
       message: 'Inicio de sesión exitoso'
     })
 
-    router.push('/supervisor')
+    if (response.supervisor.mustChangePassword) {
+      router.push('/change-password')
+    } else {
+      router.push('/supervisor')
+    }
   } catch (error) {
     const errorMsg = error.response?.data?.message || 'Error al iniciar sesión'
     $q.notify({
