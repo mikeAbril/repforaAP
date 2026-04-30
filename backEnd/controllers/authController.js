@@ -45,7 +45,8 @@ export const login = async (req, res, next) => {
         const token = generateToken({
             id: supervisor._id,
             documentNumber: supervisor.documentNumber,
-            role: supervisor.role
+            role: supervisor.role,
+            mustChangePassword: supervisor.mustChangePassword
         });
 
         res.json({
@@ -62,6 +63,48 @@ export const login = async (req, res, next) => {
                 mustChangePassword: supervisor.mustChangePassword,
                 isConfigured: supervisor.isConfigured
             },
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * POST /api/auth/change-password
+ * Permite cambiar la contraseña obligatoria en el primer ingreso.
+ */
+export const changePassword = async (req, res, next) => {
+    try {
+        const { newPassword } = req.body;
+        const supervisorId = req.supervisor.id;
+
+        if (!newPassword || newPassword.length < 6) {
+            return res.status(400).json({
+                success: false,
+                message: "La nueva contraseña debe tener al menos 6 caracteres."
+            });
+        }
+
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+        await Supervisor.findByIdAndUpdate(supervisorId, {
+            password: hashedPassword,
+            mustChangePassword: false
+        });
+
+        // Generar un nuevo token que refleje que ya no debe cambiar la contraseña
+        const updatedSupervisor = await Supervisor.findById(supervisorId);
+        const token = generateToken({ 
+            id: updatedSupervisor._id, 
+            documentNumber: updatedSupervisor.documentNumber,
+            role: updatedSupervisor.role,
+            mustChangePassword: false
+        });
+
+        res.json({
+            success: true,
+            message: "Contraseña actualizada exitosamente.",
+            token
         });
     } catch (error) {
         next(error);
