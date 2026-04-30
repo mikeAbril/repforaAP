@@ -51,8 +51,16 @@ export const getProfile = async (req, res, next) => {
  */
 export const updateProfile = async (req, res, next) => {
     try {
-        const { apiKey } = req.body;
+        let { apiKey } = req.body;
         const supervisorId = req.supervisor.id;
+
+        if (apiKey !== undefined) {
+            if (apiKey.trim() === "") {
+                apiKey = null;
+            } else {
+                apiKey = encrypt(apiKey.trim());
+            }
+        }
 
         const supervisor = await Supervisor.findByIdAndUpdate(
             supervisorId, 

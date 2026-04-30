@@ -23,8 +23,8 @@ Este documento detalla el progreso actual del proyecto según los nuevos requeri
 ### 2. Flujo de Onboarding y Autenticación
 
 - [x] **Contraseña por defecto**: Al crear un supervisor desde el panel de admin, la contraseña inicial es igual al `documentNumber`.
-- [ ] **Forzar cambio de contraseña**: Agregar un flag (ej. `mustChangePassword`) en `Supervisor`. Al iniciar sesión, retornar un estado que obligue al frontend a mostrar la pantalla de cambio de clave. *(Backend listo, falta Frontend)*
-- [ ] **Obligar ingreso de API Key**: Validar y forzar que el supervisor ingrese su clave de 2Captcha en el mismo modal de primer login si no la tiene configurada. *(Backend listo, falta Frontend)*
+- [x] **Forzar cambio de contraseña**: Implementado. Al iniciar sesión por primera vez, el sistema obliga al supervisor a cambiar su contraseña mediante la vista `ChangePasswordView.vue`.
+- [x] **Gestión individual de API Key**: Implementado en el panel del supervisor (`SupervisorView.vue`), permitiendo al usuario ingresar su clave de 2Captcha y consultar una guía de ayuda interactiva.
 
 ### 3. Validaciones de la API Key en el Backend
 
