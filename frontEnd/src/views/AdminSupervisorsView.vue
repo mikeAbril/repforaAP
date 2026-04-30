@@ -81,7 +81,7 @@
                     :rules="[val => !!val || 'Requerido']"
                   />
                 </div>
-                <div class="col-12">
+                <div class="col-12" v-if="isEditing">
                   <q-input
                     outlined
                     v-model="formData.documentIssueDate"
@@ -91,6 +91,7 @@
                     placeholder="2024/01/01"
                   />
                 </div>
+
                 <div class="col-12">
                   <q-input
                     outlined
@@ -120,15 +121,7 @@
                     :rules="[val => !!val || 'Requerido']"
                   />
                 </div>
-                <div class="col-12" v-if="!isEditing">
-                  <q-input
-                    outlined
-                    v-model="formData.apiKey"
-                    label="2Captcha API Key"
-                    dense
-                    placeholder="Opcional"
-                  />
-                </div>
+
               </div>
 
               <div class="row justify-end q-mt-md">
@@ -164,8 +157,7 @@ const formData = ref({
   documentIssueDate: '',
   name: '',
   email: '',
-  role: 'supervisor',
-  apiKey: ''
+  role: 'supervisor'
 })
 
 const columns = [
@@ -199,8 +191,7 @@ const openCreateDialog = () => {
     documentIssueDate: '',
     name: '',
     email: '',
-    role: 'supervisor',
-    apiKey: ''
+    role: 'supervisor'
   }
   showDialog.value = true
 }
@@ -214,8 +205,7 @@ const editSupervisor = (supervisor) => {
     documentIssueDate: supervisor.documentIssueDate || '',
     name: supervisor.name,
     email: supervisor.email,
-    role: supervisor.role,
-    apiKey: supervisor.apiKey || ''
+    role: supervisor.role
   }
   showDialog.value = true
 }
@@ -225,11 +215,6 @@ const saveSupervisor = async () => {
   try {
     const payload = { ...formData.value }
     
-    // Al editar, no enviamos el apiKey (se gestiona aparte)
-    if (isEditing.value) {
-      delete payload.apiKey
-    }
-
     let res
     if (isEditing.value) {
       res = await api.put(`/supervisors/admin/${currentId.value}`, payload)

@@ -64,6 +64,43 @@
         </div>
       </div>
 
+      <!-- Scraper Configuration Section -->
+      <div class="config-section-premium q-mb-xl">
+        <div class="config-card">
+          <div class="row items-center q-gutter-x-md no-wrap">
+            <div class="config-icon-box">
+              <q-icon name="vpn_key" size="24px" color="primary" />
+            </div>
+            <div class="config-info col">
+              <div class="row items-center">
+                <h3 class="config-title">Configuración de Solución de Captchas</h3>
+                <q-btn flat dense color="primary" label="¿Cómo obtenerla?" class="info-link q-ml-sm" @click="showApiKeyHelp = true" />
+              </div>
+              <p class="config-subtitle">Ingrese su API Key de 2Captcha para automatizar procesos (Opcional)</p>
+            </div>
+            <div class="config-action row items-center q-gutter-x-sm">
+              <q-input 
+                outlined 
+                v-model="profile.apiKey" 
+                placeholder="Introduzca su API Key" 
+                class="api-key-input"
+                dense
+                hide-bottom-space
+              />
+              <q-btn 
+                color="primary" 
+                unelevated 
+                class="save-config-btn"
+                :loading="savingApiKey"
+                @click="updateApiKey"
+              >
+                Guardar
+              </q-btn>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- History Section -->
       <section class="history-section">
         <div class="history-card-premium">
@@ -212,7 +249,54 @@
       </q-card>
     </q-dialog>
 
-  </q-page>
+      <!-- API Key Help Dialog -->
+      <q-dialog v-model="showApiKeyHelp">
+        <q-card class="help-card-premium">
+          <q-card-section class="row items-center q-pb-none">
+            <div class="text-h6 fw-800">¿Cómo obtener mi API Key?</div>
+            <q-space />
+            <q-btn icon="close" flat round dense v-close-popup color="grey-7" />
+          </q-card-section>
+
+          <q-card-section class="q-pa-lg">
+            <div class="help-steps">
+              <div class="step-item">
+                <div class="step-number">1</div>
+                <div class="step-text">
+                  <strong>Regístrese:</strong> Cree una cuenta en <a href="https://2captcha.com?from=19102432" target="_blank" class="text-primary fw-700">2captcha.com</a>.
+                </div>
+              </div>
+              <div class="step-item">
+                <div class="step-number">2</div>
+                <div class="step-text">
+                  <strong>Cargue saldo:</strong> Ingrese fondos (el mínimo de $1 USD es suficiente para cientos de captchas).
+                </div>
+              </div>
+              <div class="step-item">
+                <div class="step-number">3</div>
+                <div class="step-text">
+                  <strong>Dashboard:</strong> En su panel principal, busque la sección <strong>"Account Settings"</strong> o <strong>"Dashboard"</strong>.
+                </div>
+              </div>
+              <div class="step-item">
+                <div class="step-number">4</div>
+                <div class="step-text">
+                  <strong>Copie la clave:</strong> Verá un código largo llamado <strong>"API Key"</strong>. Cópielo y péguelo en el panel de Repfora.
+                </div>
+              </div>
+            </div>
+
+            <q-banner dense class="bg-blue-1 text-blue-9 rounded-borders q-mt-md">
+              <template v-slot:avatar>
+                <q-icon name="info" color="blue-8" />
+              </template>
+              Esta clave permite que el sistema resuelva los retos visuales de las plataformas de forma automática.
+            </q-banner>
+          </q-card-section>
+        </q-card>
+      </q-dialog>
+
+    </q-page>
 </template>
 
 
@@ -226,6 +310,7 @@ import api from '@/plugins/axios'
 const $q = useQuasar()
 const router = useRouter()
 const searchFilter = ref('')
+const showApiKeyHelp = ref(false)
 const loading = ref(false)
 const showSettings = ref(false)
 
@@ -247,7 +332,8 @@ const stats = ref({
 const profile = ref({ 
   name: '', 
   documentNumber: '',
-  role: 'supervisor'
+  role: 'supervisor',
+  apiKey: ''
 })
 
 const fetchProfile = async () => {
@@ -258,6 +344,31 @@ const fetchProfile = async () => {
     }
   } catch (error) {
     console.error('Error loading profile:', error)
+  }
+}
+
+const savingApiKey = ref(false)
+const updateApiKey = async () => {
+  savingApiKey.value = true
+  try {
+    const res = await api.put('/supervisors/profile', { apiKey: profile.value.apiKey })
+    if (res.data.success) {
+      $q.notify({
+        color: 'positive',
+        message: 'Configuración guardada correctamente',
+        icon: 'check_circle',
+        position: 'top'
+      })
+    }
+  } catch (error) {
+    $q.notify({
+      color: 'negative',
+      message: 'Error al guardar la configuración',
+      icon: 'warning',
+      position: 'top'
+    })
+  } finally {
+    savingApiKey.value = false
   }
 }
 
@@ -426,6 +537,85 @@ onMounted(() => {
   border: 1px solid #e2e8f0;
 }
 
+
+/* Scraper Config Section */
+.config-card {
+  background: white;
+  border-radius: 20px;
+  padding: 1.5rem 2rem;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.02);
+}
+.config-icon-box {
+  background: #f0f9ff;
+  width: 50px;
+  height: 50px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.config-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+.config-subtitle {
+  font-size: 0.85rem;
+  color: #64748b;
+  margin: 0;
+}
+.api-key-input {
+  width: 300px;
+}
+:deep(.api-key-input .q-field__control) {
+  border-radius: 10px !important;
+}
+.save-config-btn {
+  border-radius: 10px;
+  font-weight: 700;
+  padding: 0 1.5rem;
+  height: 40px;
+}
+
+/* Help Dialog Styles */
+.help-card-premium {
+  width: 500px;
+  max-width: 90vw;
+  border-radius: 24px;
+}
+.help-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+.step-item {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+}
+.step-number {
+  background: #0f172a;
+  color: white;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 800;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.step-text {
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: #334155;
+}
+.fw-800 { font-weight: 800; }
+.fw-700 { font-weight: 700; }
 
 .header-btn-premium.admin:hover {
   background-color: #f0f9ff;

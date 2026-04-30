@@ -46,13 +46,27 @@ export const getProfile = async (req, res, next) => {
 
 /**
  * PUT /api/supervisors/profile
- * Actualiza nombre y número de documento del supervisor.
+ * Permite al supervisor actualizar su apiKey de 2Captcha.
  */
 export const updateProfile = async (req, res, next) => {
-    return res.status(403).json({
-        success: false,
-        message: "Actualización de perfil deshabilitada. Los datos están vinculados a la estructura de Drive."
-    });
+    try {
+        const { apiKey } = req.body;
+        const supervisorId = req.supervisor.id;
+
+        const supervisor = await Supervisor.findByIdAndUpdate(
+            supervisorId, 
+            { apiKey }, 
+            { new: true }
+        ).select("-password");
+
+        res.json({
+            success: true,
+            message: "Perfil actualizado correctamente",
+            supervisor
+        });
+    } catch (error) {
+        next(error);
+    }
 };
 
 /**
