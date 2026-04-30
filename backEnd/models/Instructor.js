@@ -21,11 +21,6 @@ const instructorSchema = new Schema(
             required: [true, "El nombre completo es obligatorio"],
             trim: true,
         },
-        eps: {
-            type: String,
-            required: [true, "La EPS es obligatoria"],
-            trim: true,
-        },
         email: {
             type: String,
             required: [true, "El correo es obligatorio"],

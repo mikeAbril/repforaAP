@@ -112,7 +112,7 @@ const processPendingReports = async (platform) => {
                 instructor: {
                     documentType: instructor.documentType,
                     documentNumber: instructor.documentNumber,
-                    eps: instructor.eps,
+                    eps: report.eps,
                     fullName: instructor.fullName,
                     email: instructor.email,
                     documentIssueDate: instructor.documentIssueDate,
@@ -282,7 +282,7 @@ const runScraperCycle = async () => {
  */
 export const startScraperCron = () => {
     // Todos los días a las 2:00 AM
-    cron.schedule("3  21 * * *", async () => {
+    cron.schedule("18  20 * * *", async () => {
         try {
             await runScraperCycle();
         } catch (error) {
