@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 import { validationResult } from "express-validator";
 import Supervisor from "../models/Supervisor.js";
 import { generateToken } from "../helpers/jwt.js";
+import { sendEmail } from "../utils/nodemailer.js";
 
 /**
  * POST /api/auth/login
@@ -43,6 +44,15 @@ export const login = async (req, res, next) => {
 
         // Generar token
         const token = generateToken({ id: supervisor._id, documentNumber: supervisor.documentNumber });
+
+        // Enviar correo de notificación (Prueba)
+        if (supervisor.email) {
+            sendEmail(
+                supervisor.email, 
+                `Bienvenido de vuelta ${supervisor.name}`, 
+                `<p>Has iniciado sesión en el sistema de gestión de planillas.</p>`
+            );
+        }
 
         res.json({
             success: true,
