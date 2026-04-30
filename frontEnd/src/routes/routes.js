@@ -4,6 +4,7 @@ import HomeView from '@/views/HomeView.vue'
 import UnifiedForm from '@/components/UnifiedForm.vue'
 import LoginView from '@/views/LoginView.vue'
 import SupervisorView from '@/views/SupervisorView.vue'
+import AdminSupervisorsView from '@/views/AdminSupervisorsView.vue'
 
 const routes = [
     {
@@ -28,6 +29,12 @@ const routes = [
                 path: 'supervisor',
                 name: 'Supervisor',
                 component: SupervisorView,
+                meta: { requiresAuth: true }
+            },
+            {
+                path: 'admin/supervisors',
+                name: 'AdminSupervisors',
+                component: AdminSupervisorsView,
                 meta: { requiresAuth: true }
             }
         ]

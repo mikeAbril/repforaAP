@@ -15,6 +15,18 @@
         </div>
         <div class="header-actions row q-gutter-x-md">
           <q-btn 
+            v-if="profile.role === 'admin'"
+            flat 
+            color="primary" 
+            class="header-btn-premium admin q-mr-md"
+            @click="router.push('/admin/supervisors')"
+          >
+            <div class="row items-center no-wrap">
+              <q-icon name="admin_panel_settings" size="xs" class="q-mr-sm" />
+              <span>Gestión Admin</span>
+            </div>
+          </q-btn>
+          <q-btn 
             flat 
             color="primary" 
             class="header-btn-premium secondary"
@@ -234,7 +246,8 @@ const stats = ref({
 
 const profile = ref({ 
   name: '', 
-  documentNumber: ''
+  documentNumber: '',
+  role: 'supervisor'
 })
 
 const fetchProfile = async () => {
@@ -413,6 +426,11 @@ onMounted(() => {
   border: 1px solid #e2e8f0;
 }
 
+
+.header-btn-premium.admin:hover {
+  background-color: #f0f9ff;
+  border-color: #bae6fd;
+}
 
 .header-btn-premium.logout:hover {
   background-color: #fef2f2;
