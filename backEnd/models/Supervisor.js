@@ -45,6 +45,11 @@ const supervisorSchema = new Schema(
             type: Boolean,
             default: false,
         },
+        role: {
+            type: String,
+            enum: ["admin", "supervisor"],
+            default: "supervisor",
+        },
     },
     {
         timestamps: true,

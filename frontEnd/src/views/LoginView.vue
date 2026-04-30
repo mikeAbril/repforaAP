@@ -38,23 +38,7 @@
                 <p class="form-subtitle">Ingrese sus credenciales de acceso</p>
               </header>
 
-              <div class="field-group">
-                <label class="field-label">Tipo de Documento</label>
-                <q-select 
-                  outlined 
-                  v-model="documentType" 
-                  :options="['CC', 'CE', 'PA', 'TI', 'CD', 'PE', 'PT', 'RC', 'SC']"
-                  placeholder="Seleccione tipo"
-                  class="premium-input"
-                  dense
-                  lazy-rules
-                  :rules="[val => val && val.length > 0 || 'Campo obligatorio']"
-                >
-                  <template v-slot:prepend>
-                    <q-icon name="badge" color="grey-6" />
-                  </template>
-                </q-select>
-              </div>
+
 
               <div class="row q-col-gutter-md q-mb-md">
                 <div class="col-4">
