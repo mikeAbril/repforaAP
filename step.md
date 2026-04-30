@@ -6,8 +6,8 @@ Este documento detalla el progreso actual del proyecto según los nuevos requeri
 
 1. **Modelos de Base de Datos (Actualizados):**
    - `models/Supervisor.js`: Se ha agregado el campo `apiKey` para alojar la clave de 2Captcha por usuario.
-   - `models/Instructor.js`: La entidad `Contractor` migró a `Instructor`, incorporando campos clave como `documentIssueDate` y la referencia al `supervisorId`.
-   - `models/Report.js`: Actualizado para referenciar correctamente a `Instructor` (`instructorId`) en lugar de `contractorId`, e incluyó campos obligatorios de mes y año (`reportMonth`, `reportYear`).
+   - `models/Instructor.js`: La entidad `Contractor` migró a `Instructor`, incorporando campos clave como `documentIssueDate` y la referencia al `supervisorId`. **Se eliminó el campo `eps` ya que este dato ahora es variable por reporte.**
+   - `models/Report.js`: Actualizado para referenciar correctamente a `Instructor` (`instructorId`) en lugar de `contractorId`, e incluyó campos obligatorios de mes y año (`reportMonth`, `reportYear`) y **el campo `eps` (movido desde el Instructor).**
 
 ---
 

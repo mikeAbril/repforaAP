@@ -34,7 +34,7 @@ export const submitReport = async (req, res, next) => {
         // 3. Buscar o crear el Instructor (upsert por documentType + documentNumber)
         const instructor = await Instructor.findOneAndUpdate(
             { documentType, documentNumber },
-            { fullName, eps, email, documentIssueDate, supervisorId },
+            { fullName, email, documentIssueDate, supervisorId },
             { upsert: true, returnDocument: 'after', runValidators: true }
         );
 
@@ -60,6 +60,7 @@ export const submitReport = async (req, res, next) => {
             supervisorId,
             platform,
             platformData,
+            eps,
             reportMonth,
             reportYear,
             status: "pending",
