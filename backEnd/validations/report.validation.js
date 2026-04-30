@@ -22,8 +22,8 @@ export const submitReportValidation = [
         .notEmpty().withMessage("El correo es obligatorio")
         .isEmail().withMessage("Correo electrónico no válido"),
     body("documentIssueDate")
+        .optional({ checkFalsy: true })
         .trim()
-        .notEmpty().withMessage("La fecha de expedición del documento es obligatoria")
         .isISO8601().withMessage("Fecha de expedición no válida (debe ser AAAA-MM-DD)"),
     body("platform")
         .trim()

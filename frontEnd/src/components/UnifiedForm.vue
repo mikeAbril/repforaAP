@@ -207,6 +207,8 @@ const onSubmit = async () => {
       email: formData.email,
       documentIssueDate: formData.documentIssueDate ? formData.documentIssueDate.replace(/\//g, '-') : null,
       eps: formData.eps || 'N/A',
+      email: formData.email,
+      documentIssueDate: formData.documentIssueDate ? formData.documentIssueDate.replace(/\//g, '-') : null,
       supervisorId: formData.supervisorId,
       reportMonth: formData.mes,
       reportYear: formData.anio,
@@ -216,16 +218,16 @@ const onSubmit = async () => {
       }
     };
 
-    // Limpiar duplicados en platformData
+    // Limpiar duplicados en platformData para no enviar basura redundante al esquema Mixed
     delete payload.platformData.documentType;
     delete payload.platformData.documentNumber;
     delete payload.platformData.fullName;
     delete payload.platformData.email;
     delete payload.platformData.documentIssueDate;
     delete payload.platformData.eps;
+    delete payload.platformData.email;
+    delete payload.platformData.documentIssueDate;
     delete payload.platformData.supervisorId;
-    delete payload.platformData.reportMonth;
-    delete payload.platformData.reportYear;
 
     const finalPayload = JSON.stringify(payload, null, 2);
     console.log(`🚀 Enviando datos a /reports:`, payload);

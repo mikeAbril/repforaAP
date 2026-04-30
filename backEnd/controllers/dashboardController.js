@@ -82,7 +82,7 @@ export const getReports = async (req, res, next) => {
                 .sort({ createdAt: -1 })
                 .skip(skip)
                 .limit(limitNum)
-                .populate("instructorId", "documentType documentNumber fullName eps email documentIssueDate")
+                .populate("instructorId", "documentType documentNumber fullName email documentIssueDate")
                 .lean(),
             Report.countDocuments(filter),
         ]);
