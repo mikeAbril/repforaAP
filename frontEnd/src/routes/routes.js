@@ -1,7 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import MainLayout from '@/layouts/MainLayout.vue'
-import HomeView from '@/views/HomeView.vue'
-import UnifiedForm from '@/components/UnifiedForm.vue'
+import CardTest from '@/views/CardTest.vue'
 import LoginView from '@/views/LoginView.vue'
 import SupervisorView from '@/views/SupervisorView.vue'
 import AdminSupervisorsView from '@/views/AdminSupervisorsView.vue'
@@ -16,15 +15,8 @@ const routes = [
     {
         path: '/',
         component: MainLayout,
-        // The main layout and forms are public
         children: [
-            { path: '', name: 'Home', component: HomeView },
-            { 
-                path: 'form/:platform', 
-                name: 'UnifiedForm', 
-                component: UnifiedForm,
-                props: true 
-            },
+            { path: '', name: 'Home', component: CardTest },
             {
                 path: 'supervisor',
                 name: 'Supervisor',
