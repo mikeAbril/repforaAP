@@ -84,6 +84,16 @@
                 <div class="col-12">
                   <q-input
                     outlined
+                    v-model="formData.documentIssueDate"
+                    label="Fecha Expedición (AAAA/MM/DD)"
+                    dense
+                    mask="####/##/##"
+                    placeholder="2024/01/01"
+                  />
+                </div>
+                <div class="col-12">
+                  <q-input
+                    outlined
                     v-model="formData.name"
                     label="Nombre Completo"
                     dense
@@ -101,16 +111,6 @@
                   />
                 </div>
                 <div class="col-12">
-                  <q-input
-                    outlined
-                    v-model="formData.password"
-                    label="Contraseña"
-                    dense
-                    :placeholder="isEditing ? 'Dejar en blanco para no cambiar' : 'Por defecto su documento'"
-                    :rules="[!isEditing && !formData.password || !!formData.password || 'Requerido']"
-                  />
-                </div>
-                <div class="col-12">
                   <q-select
                     outlined
                     v-model="formData.role"
@@ -120,7 +120,7 @@
                     :rules="[val => !!val || 'Requerido']"
                   />
                 </div>
-                <div class="col-12">
+                <div class="col-12" v-if="!isEditing">
                   <q-input
                     outlined
                     v-model="formData.apiKey"
@@ -161,9 +161,9 @@ const currentId = ref(null)
 const formData = ref({
   documentType: 'CC',
   documentNumber: '',
+  documentIssueDate: '',
   name: '',
   email: '',
-  password: '',
   role: 'supervisor',
   apiKey: ''
 })
@@ -196,9 +196,9 @@ const openCreateDialog = () => {
   formData.value = {
     documentType: 'CC',
     documentNumber: '',
+    documentIssueDate: '',
     name: '',
     email: '',
-    password: '',
     role: 'supervisor',
     apiKey: ''
   }
@@ -211,9 +211,9 @@ const editSupervisor = (supervisor) => {
   formData.value = {
     documentType: supervisor.documentType,
     documentNumber: supervisor.documentNumber,
+    documentIssueDate: supervisor.documentIssueDate || '',
     name: supervisor.name,
     email: supervisor.email,
-    password: '', // Password stays empty unless changed
     role: supervisor.role,
     apiKey: supervisor.apiKey || ''
   }
@@ -224,8 +224,10 @@ const saveSupervisor = async () => {
   saving.value = true
   try {
     const payload = { ...formData.value }
-    if (isEditing.value && !payload.password) {
-      delete payload.password
+    
+    // Al editar, no enviamos el apiKey (se gestiona aparte)
+    if (isEditing.value) {
+      delete payload.apiKey
     }
 
     let res

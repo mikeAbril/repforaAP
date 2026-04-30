@@ -16,6 +16,11 @@ const supervisorSchema = new Schema(
             required: [true, "El número de documento es obligatorio"],
             trim: true,
         },
+        documentIssueDate: {
+            type: String,
+            trim: true,
+            default: null,
+        },
         name: {
             type: String,
             required: [true, "El nombre es obligatorio"],

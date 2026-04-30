@@ -61,8 +61,9 @@ export const updateProfile = async (req, res, next) => {
  */
 export const adminCreateSupervisor = async (req, res, next) => {
     try {
-        const { password, ...rest } = req.body;
-        const hashedPassword = await bcrypt.hash(password || rest.documentNumber, 10);
+        const { ...rest } = req.body;
+        // La contraseña es SIEMPRE el número de documento al crear desde el panel admin
+        const hashedPassword = await bcrypt.hash(rest.documentNumber, 10);
 
         const newSupervisor = new Supervisor({
             ...rest,
