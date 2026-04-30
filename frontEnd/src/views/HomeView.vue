@@ -7,21 +7,17 @@
         <div class="logo-container-home">
           <img src="@/assets/logo-sena.png" alt="SENA Logo" class="home-logo" />
         </div>
-        <h1 class="hero-title" v-if="step === 1">
+        <h1 class="hero-title">
           Gestión de <br>
           <span class="accent-text">Certificados de Seguridad Social</span>
         </h1>
-        <h1 class="hero-title" v-else>
-          Seleccione <span class="accent-text">plataforma</span>
-        </h1>
-        <p v-if="step === 2" class="hero-desc">Elija la plataforma para procesar su certificado de seguridad social.</p>
       </header>
 
 
       <!-- PASO 1: Selección de Perfil -->
-      <div v-if="step === 1" class="action-cards-grid fade-in">
+      <div class="action-cards-grid fade-in">
         <!-- Card Formulario -->
-        <div class="action-card form-card" @click="goToStep(2)">
+        <div class="action-card form-card" @click="goToInstructor">
           <div class="card-visual-side green">
             <div class="visual-icon-box green">
               <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14.5 2 14.5 8 20 8"/><path d="M10 13l2 2 4-4"/></svg>
@@ -54,34 +50,6 @@
         </div>
       </div>
 
-      <!-- PASO 2: Selección de Plataforma -->
-      <div v-if="step === 2" class="fade-in">
-        <div class="platforms-grid">
-          
-          <div 
-            v-for="platform in platforms" 
-            :key="platform.id"
-            class="platform-card-premium"
-            @click="goToPlatform(platform.id)"
-          >
-            <div class="platform-info">
-              <span class="platform-name">{{ platform.name }}</span>
-              <span class="platform-action">Iniciar trámite</span>
-            </div>
-
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="chevron"><path d="m9 18 6-6-6-6"/></svg>
-          </div>
-
-        </div>
-
-        <div class="text-center q-mt-xl">
-           <button class="btn-back" @click="goToStep(1)">
-             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-             Volver al inicio
-           </button>
-        </div>
-      </div>
-
     </div>
   </q-page>
 </template>
@@ -91,24 +59,10 @@ import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/store/auth';
 
-const step = ref(1);
 const router = useRouter();
 
-const platforms = [
-  { id: 'soi', name: 'SOI' },
-  { id: 'asopagos', name: 'ASOPAGOS' },
-  { id: 'mi_planilla', name: 'COMPENSAR (Mi Planilla)' },
-  { id: 'aportes_en_linea', name: 'APORTES EN LÍNEA' }
-];
-
-
-
-const goToStep = (newStep) => {
-  step.value = newStep;
-};
-
-const goToPlatform = (platform) => {
-  router.push(`/form/${platform}`);
+const goToInstructor = () => {
+  router.push('/instructor');
 };
 
 const goToSupervisor = () => {

@@ -66,28 +66,33 @@
         <div class="config-card">
           <div class="row items-center q-gutter-x-md no-wrap">
             <div class="config-icon-box">
-              <q-icon name="vpn_key" size="24px" color="primary" />
+              <span class="material-symbols-outlined" style="font-size: 24px; color: var(--color_button)">key</span>
             </div>
             <div class="config-info col">
               <div class="row items-center">
                 <h3 class="config-title">Configuración de Solución de Captchas</h3>
-                <q-btn flat dense color="primary" label="¿Cómo obtenerla?" class="info-link q-ml-sm" @click="showApiKeyHelp = true" />
+                <q-btn flat dense class="info-link q-ml-sm" @click="showApiKeyHelp = true">
+                  <span style="color: var(--color_button); font-weight: 700; font-size: 0.85rem;">¿Cómo obtenerla?</span>
+                </q-btn>
               </div>
               <p class="config-subtitle">Ingrese su API Key de 2Captcha para automatizar procesos (Opcional)</p>
             </div>
             <div class="config-action row items-center q-gutter-x-sm">
-              <q-input 
-                outlined 
-                v-model="profile.apiKey" 
-                placeholder="Introduzca su API Key" 
+              <q-input
+                outlined
+                v-model="profile.apiKey"
+                label="Introduzca su API Key"
                 class="api-key-input"
                 dense
                 hide-bottom-space
-              />
-              <q-btn 
-                color="primary" 
-                unelevated 
-                class="save-config-btn"
+              >
+                <template v-slot:prepend>
+                  <span class="material-symbols-outlined" style="font-size: 18px; color: var(--text-muted)">vpn_key</span>
+                </template>
+              </q-input>
+              <q-btn
+                class="bg-green-9 text-white save-config-btn"
+                unelevated
                 :loading="savingApiKey"
                 @click="updateApiKey"
               >
@@ -536,14 +541,14 @@ onMounted(() => {
 
 /* Scraper Config Section */
 .config-card {
-  background: white;
-  border-radius: 20px;
+  background: var(--white);
+  border-radius: var(--radius);
   padding: 1.5rem 2rem;
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.02);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
 }
 .config-icon-box {
-  background: #f0f9ff;
+  background: var(--primary-light);
   width: 50px;
   height: 50px;
   border-radius: 12px;
@@ -554,12 +559,12 @@ onMounted(() => {
 .config-title {
   font-size: 1.1rem;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--text-dark);
   margin: 0;
 }
 .config-subtitle {
   font-size: 0.85rem;
-  color: #64748b;
+  color: var(--text-muted);
   margin: 0;
 }
 .api-key-input {
@@ -579,7 +584,7 @@ onMounted(() => {
 .help-card-premium {
   width: 500px;
   max-width: 90vw;
-  border-radius: 24px;
+  border-radius: var(--radius);
 }
 .help-steps {
   display: flex;
@@ -592,7 +597,7 @@ onMounted(() => {
   align-items: flex-start;
 }
 .step-number {
-  background: #0f172a;
+  background: var(--color_button);
   color: white;
   width: 28px;
   height: 28px;
@@ -608,10 +613,8 @@ onMounted(() => {
 .step-text {
   font-size: 0.95rem;
   line-height: 1.5;
-  color: #334155;
+  color: var(--text-dark);
 }
-.fw-800 { font-weight: 800; }
-.fw-700 { font-weight: 700; }
 
 .header-btn-premium.admin:hover {
   background-color: var(--primary-light);

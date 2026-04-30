@@ -24,7 +24,7 @@
               icon="arrow_back"
               color="white"
               class="back-btn"
-              @click="router.push('/instructor')"
+              @click="router.push('/')"
             />
           </div>
 

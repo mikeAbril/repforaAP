@@ -19,7 +19,8 @@ const routes = [
         path: '/',
         component: MainLayout,
         children: [
-            { path: '', name: 'Home', component: CardTest },
+            { path: '', name: 'Home', component: HomeView },
+            { path: 'instructor', name: 'Instructor', component: InstructorView },
             {
                 path: 'form/:platform',
                 name: 'UnifiedForm',
