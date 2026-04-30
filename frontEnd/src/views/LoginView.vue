@@ -38,21 +38,38 @@
                 <p class="form-subtitle">Ingrese sus credenciales de acceso</p>
               </header>
 
-              <div class="field-group">
-                <label class="field-label">Número de Documento</label>
-                <q-input 
-                  outlined 
-                  v-model="documentNumber" 
-                  placeholder="Ingrese su documento"
-                  class="premium-input"
-                  dense
-                  lazy-rules
-                  :rules="[val => val && val.length > 0 || 'Campo obligatorio']"
-                >
-                  <template v-slot:prepend>
-                    <q-icon name="person_outline" color="grey-6" />
-                  </template>
-                </q-input>
+              <div class="row q-col-gutter-md q-mb-md">
+                <div class="col-4">
+                  <div class="field-group">
+                    <label class="field-label">Tipo</label>
+                    <q-select
+                      outlined
+                      v-model="documentType"
+                      :options="['CC', 'CE', 'PA', 'TI', 'CD', 'PE', 'PT', 'RC', 'SC']"
+                      dense
+                      class="premium-input"
+                      :rules="[val => !!val || 'Requerido']"
+                    />
+                  </div>
+                </div>
+                <div class="col-8">
+                  <div class="field-group">
+                    <label class="field-label">Número de Documento</label>
+                    <q-input 
+                      outlined 
+                      v-model="documentNumber" 
+                      placeholder="Ingrese su documento"
+                      class="premium-input"
+                      dense
+                      lazy-rules
+                      :rules="[val => val && val.length > 0 || 'Campo obligatorio']"
+                    >
+                      <template v-slot:prepend>
+                        <q-icon name="person_outline" color="grey-6" />
+                      </template>
+                    </q-input>
+                  </div>
+                </div>
               </div>
 
               <div class="field-group">
@@ -122,6 +139,7 @@ import { useQuasar } from 'quasar'
 import { useAuthStore } from '@/store/auth'
 import { postData } from '@/services/apiClient'
 
+const documentType = ref('CC')
 const documentNumber = ref('')
 const password = ref('')
 const showPassword = ref(false)
@@ -134,6 +152,7 @@ const onSubmit = async () => {
   loading.value = true
   try {
     const response = await postData('/auth/login', {
+      documentType: documentType.value,
       documentNumber: documentNumber.value,
       password: password.value
     })

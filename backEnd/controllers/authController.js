@@ -53,7 +53,9 @@ export const login = async (req, res, next) => {
                 documentNumber: supervisor.documentNumber,
                 name: supervisor.name,
                 email: supervisor.email,
-                apiKey: supervisor.apiKey
+                apiKey: supervisor.apiKey,
+                mustChangePassword: supervisor.mustChangePassword,
+                isConfigured: supervisor.isConfigured
             },
         });
     } catch (error) {
