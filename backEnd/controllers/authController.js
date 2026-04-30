@@ -21,9 +21,9 @@ export const login = async (req, res, next) => {
         const { documentType, documentNumber, password } = req.body;
 
         // Buscar supervisor por tipo y número de documento
-        const supervisor = await Supervisor.findOne({ 
-            documentType, 
-            documentNumber: documentNumber.trim() 
+        const supervisor = await Supervisor.findOne({
+            documentType,
+            documentNumber: documentNumber.trim()
         });
         if (!supervisor) {
             return res.status(401).json({
@@ -42,7 +42,11 @@ export const login = async (req, res, next) => {
         }
 
         // Generar token
-        const token = generateToken({ id: supervisor._id, documentNumber: supervisor.documentNumber });
+        const token = generateToken({
+            id: supervisor._id,
+            documentNumber: supervisor.documentNumber,
+            role: supervisor.role
+        });
 
         res.json({
             success: true,
@@ -53,6 +57,7 @@ export const login = async (req, res, next) => {
                 documentNumber: supervisor.documentNumber,
                 name: supervisor.name,
                 email: supervisor.email,
+                role: supervisor.role,
                 apiKey: supervisor.apiKey,
                 mustChangePassword: supervisor.mustChangePassword,
                 isConfigured: supervisor.isConfigured

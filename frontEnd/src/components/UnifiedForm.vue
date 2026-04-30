@@ -204,6 +204,8 @@ const onSubmit = async () => {
       documentType: formData.documentType,
       documentNumber: formData.documentNumber,
       fullName: formData.fullName,
+      email: formData.email,
+      documentIssueDate: formData.documentIssueDate ? formData.documentIssueDate.replace(/\//g, '-') : null,
       eps: formData.eps || 'N/A',
       email: formData.email,
       documentIssueDate: formData.documentIssueDate ? formData.documentIssueDate.replace(/\//g, '-') : null,
@@ -220,6 +222,8 @@ const onSubmit = async () => {
     delete payload.platformData.documentType;
     delete payload.platformData.documentNumber;
     delete payload.platformData.fullName;
+    delete payload.platformData.email;
+    delete payload.platformData.documentIssueDate;
     delete payload.platformData.eps;
     delete payload.platformData.email;
     delete payload.platformData.documentIssueDate;
