@@ -1,440 +1,331 @@
 <template>
-  <q-dialog
-    :model-value="modelValue"
-    maximized
-    transition-show="slide-up"
-    transition-hide="slide-down"
-    @update:model-value="val => { if (!val) closeModal() }"
-  >
-    <q-card class="form-modal-card">
-      <q-bar class="bg-primary text-white modal-bar">
-        <div class="bar-logo">
-          <img src="@/assets/logo-sena.png" alt="SENA" class="bar-logo-img" />
+  <q-page class="home-page-premium">
+    <div class="page-container">
+      
+      <!-- Título Seccion -->
+      <header class="page-header text-center q-mb-xl">
+        <div class="logo-container-home">
+          <img src="@/assets/logo-sena.png" alt="SENA Logo" class="home-logo" />
         </div>
-        <div class="bar-title">
-          <span class="bar-title-main">Solicitud de Certificado</span>
-          <span class="bar-title-sub">Seguridad Social</span>
-        </div>
-        <q-space />
-        <q-btn dense flat icon="close" @click="closeModal" />
-      </q-bar>
+        <h1 class="hero-title" v-if="step === 1">
+          Gestión de <br>
+          <span class="accent-text">Certificados de Seguridad Social</span>
+        </h1>
+        <h1 class="hero-title" v-else>
+          Seleccione <span class="accent-text">plataforma</span>
+        </h1>
+        <p v-if="step === 2" class="hero-desc">Elija la plataforma para procesar su certificado de seguridad social.</p>
+      </header>
 
-      <q-card-section class="modal-body q-pa-md">
-        <q-form @submit="onSubmit" class="q-gutter-y-md">
 
-          <!-- Sección: Selección de Plataforma -->
-          <div class="form-section-container">
-            <div class="section-header q-mb-sm">
-              <q-icon name="cloud_queue" color="primary" size="xs" class="q-mr-sm" />
-              <span class="section-label">Plataforma de Seguridad Social</span>
-            </div>
-            <div class="row q-col-gutter-md">
-              <div class="col-12">
-                <div class="field-group">
-                  <label class="field-label">Seleccione la plataforma</label>
-                  <q-select
-                    outlined
-                    v-model="selectedPlatform"
-                    :options="platformOptions"
-                    label="Seleccione una plataforma..."
-                    color="primary"
-                    dense
-                    emit-value
-                    map-options
-                    class="premium-input"
-                    @update:model-value="onPlatformChange"
-                  />
-                </div>
-              </div>
+      <!-- PASO 1: Selección de Perfil -->
+      <div v-if="step === 1" class="action-cards-grid fade-in">
+        <!-- Card Formulario -->
+        <div class="action-card form-card" @click="goToStep(2)">
+          <div class="card-visual-side green">
+            <div class="visual-icon-box green">
+              <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14.5 2 14.5 8 20 8"/><path d="M10 13l2 2 4-4"/></svg>
             </div>
           </div>
+          <div class="card-body">
+            <h2 class="card-title">Formulario</h2>
+            <p class="card-text">Solicite sus certificados de forma digital.</p>
+            <button class="btn-action primary">
+              Nueva Solicitud 
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            </button>
+          </div>
+        </div>
 
-          <!-- Secciones dinámicas de la plataforma seleccionada -->
-          <template v-if="currentConfig">
-            <div
-              v-for="(section, sIdx) in currentConfig.sections"
-              :key="sIdx"
-              class="form-section-container fade-in"
-            >
-              <div class="section-header q-mb-sm">
-                <q-icon :name="section.icon" color="primary" size="xs" class="q-mr-sm" />
-                <span class="section-label">{{ section.title }}</span>
-              </div>
-
-              <div class="row q-col-gutter-md">
-                <div
-                  v-for="(field, fIdx) in section.fields"
-                  :key="fIdx"
-                  :class="`col-12 col-md-${field.col}`"
-                >
-                  <div class="field-group">
-                    <label class="field-label">{{ field.label }}</label>
-
-                    <q-select
-                      v-if="field.type === 'select'"
-                      outlined
-                      v-model="formData[field.name]"
-                      :options="filteredOptions[field.name] || getOptions(field.options)"
-                      :label="formData[field.name] ? undefined : 'Seleccione una opción...'"
-                      color="primary"
-                      dense
-                      emit-value
-                      map-options
-                      use-input
-                      input-debounce="0"
-                      @filter="(val, update) => filterFn(val, update, field.name, field.options)"
-                      :new-value-mode="field.allowNewValue ? 'add-unique' : undefined"
-                      @new-value="(val, done) => { if (field.allowNewValue) done(val, 'add-unique') }"
-                      lazy-rules
-                      :rules="[val => (val !== null && val !== undefined && val !== '') || 'Este campo es obligatorio']"
-                      class="premium-input"
-                    >
-                      <template v-slot:no-option>
-                        <q-item>
-                          <q-item-section class="text-grey">
-                            {{ field.allowNewValue ? 'Presione Enter para usar este valor' : 'No hay resultados' }}
-                          </q-item-section>
-                        </q-item>
-                      </template>
-                    </q-select>
-
-                    <q-input
-                      v-else-if="field.type === 'input'"
-                      outlined
-                      v-model="formData[field.name]"
-                      :placeholder="field.mask ? undefined : 'Ingrese el valor...'"
-                      color="primary"
-                      dense
-                      :type="field.isNumber ? 'tel' : 'text'"
-                      :mask="field.mask"
-                      @keypress="field.isNumber && !field.mask ? (e) => { if (!/[0-9]/.test(e.key)) e.preventDefault(); } : null"
-                      lazy-rules
-                      :rules="[
-                        val => (val !== null && val !== undefined && val !== '') || 'Este campo es obligatorio',
-                        val => !field.isNumber || field.mask || /^\d+$/.test(val) || 'Solo se permiten números'
-                      ]"
-                      class="premium-input"
-                    />
-                  </div>
-                </div>
-              </div>
+        <!-- Card Supervisor -->
+        <div class="action-card supervisor-card" @click="goToSupervisor">
+          <div class="card-visual-side dark">
+            <div class="visual-icon-box dark">
+              <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
             </div>
-          </template>
+          </div>
+          <div class="card-body">
+            <h2 class="card-title">Supervisor</h2>
+            <p class="card-text">Acceso exclusivo para personal administrativo.</p>
+            <button class="btn-action secondary">
+              Área Administrativa <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M7 16h10"/><path d="M7 12h10"/><path d="M7 8h10"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
 
-          <!-- Botón de enviar -->
-          <div class="q-mt-md row justify-center">
-            <q-btn
-              type="submit"
-              color="primary"
-              class="submit-btn-premium"
-              unelevated
-              :loading="isSubmitting"
-              :disable="!selectedPlatform"
-            >
-              <div class="row items-center no-wrap">
-                <span class="q-mr-md">Enviar Solicitud</span>
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polyline points="22 2 15 22 11 13 2 9 22 2"/></svg>
-              </div>
-            </q-btn>
+      <!-- PASO 2: Selección de Plataforma -->
+      <div v-if="step === 2" class="fade-in">
+        <div class="platforms-grid">
+          
+          <div 
+            v-for="platform in platforms" 
+            :key="platform.id"
+            class="platform-card-premium"
+            @click="goToPlatform(platform.id)"
+          >
+            <div class="platform-info">
+              <span class="platform-name">{{ platform.name }}</span>
+              <span class="platform-action">Iniciar trámite</span>
+            </div>
+
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="chevron"><path d="m9 18 6-6-6-6"/></svg>
           </div>
 
-        </q-form>
-      </q-card-section>
-    </q-card>
-  </q-dialog>
+        </div>
+
+        <div class="text-center q-mt-xl">
+           <button class="btn-back" @click="goToStep(1)">
+             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+             Volver al inicio
+           </button>
+        </div>
+      </div>
+
+    </div>
+  </q-page>
 </template>
 
 <script setup>
-import { reactive, ref, computed, watch } from 'vue';
-import { useQuasar } from 'quasar';
-import { formConfigs, mesesOptions, mesesNombresOptions, aniosOptions, diasOptions } from '@/static/formConfigs';
-import { postData, getData } from '@/services/apiClient';
+import { ref } from 'vue';
+import { useRouter } from 'vue-router';
+import { useAuthStore } from '@/store/auth';
 
-const props = defineProps({
-  modelValue: { type: Boolean, default: false },
-  preselectedPlatform: { type: String, default: null }
-});
+const step = ref(1);
+const router = useRouter();
 
-const emit = defineEmits(['update:modelValue']);
-
-const $q = useQuasar();
-const isSubmitting = ref(false);
-const selectedPlatform = ref(null);
-
-const platformOptions = [
-  { label: 'SOI', value: 'soi' },
-  { label: 'ASOPAGOS', value: 'asopagos' },
-  { label: 'COMPENSAR (Mi Planilla)', value: 'mi_planilla' },
-  { label: 'APORTES EN LÍNEA', value: 'aportes_en_linea' }
+const platforms = [
+  { id: 'soi', name: 'SOI' },
+  { id: 'asopagos', name: 'ASOPAGOS' },
+  { id: 'mi_planilla', name: 'COMPENSAR (Mi Planilla)' },
+  { id: 'aportes_en_linea', name: 'APORTES EN LÍNEA' }
 ];
 
-const currentConfig = computed(() => {
-  if (!selectedPlatform.value) return null;
-  return formConfigs[selectedPlatform.value] || null;
-});
 
-const formData = reactive({});
-const filteredOptions = reactive({});
-const supervisorsList = ref([]);
 
-const fetchSupervisors = async () => {
-  try {
-    const data = await getData('/supervisors/list');
-    if (data.success) {
-      supervisorsList.value = data.supervisors.map(s => ({
-        label: s.name,
-        value: s._id
-      }));
-    }
-  } catch (error) {
-    console.error('Error cargando supervisores:', error);
-  }
-};
-fetchSupervisors();
-
-const initFormData = (platformId) => {
-  Object.keys(formData).forEach(key => delete formData[key]);
-  Object.keys(filteredOptions).forEach(key => delete filteredOptions[key]);
-  if (platformId && formConfigs[platformId]) {
-    formConfigs[platformId].sections.forEach(section => {
-      section.fields.forEach(field => {
-        formData[field.name] = null;
-      });
-    });
-  }
+const goToStep = (newStep) => {
+  step.value = newStep;
 };
 
-watch(() => props.modelValue, (open) => {
-  if (open) {
-    selectedPlatform.value = props.preselectedPlatform || null;
-    initFormData(selectedPlatform.value);
-  }
-});
-
-const onPlatformChange = (platformId) => {
-  initFormData(platformId);
+const goToPlatform = (platform) => {
+  router.push(`/form/${platform}`);
 };
 
-const closeModal = () => {
-  initFormData(null);
-  selectedPlatform.value = null;
-  emit('update:modelValue', false);
-};
-
-const getOptions = (options) => {
-  if (options === 'meses') return mesesOptions;
-  if (options === 'mesesNombres') return mesesNombresOptions;
-  if (options === 'anios') return aniosOptions;
-  if (options === 'dias') return diasOptions;
-  if (options === 'supervisors') return supervisorsList.value;
-  return options;
-};
-
-const filterFn = (val, update, fieldName, originalOptions) => {
-  if (val === '') {
-    update(() => { filteredOptions[fieldName] = getOptions(originalOptions); });
-    return;
-  }
-  update(() => {
-    const needle = val.toLowerCase();
-    const options = getOptions(originalOptions);
-    filteredOptions[fieldName] = options.filter(v => {
-      const label = typeof v === 'object' ? v.label : v;
-      return label.toLowerCase().indexOf(needle) > -1;
-    });
-  });
-};
-
-const onSubmit = async () => {
-  if (!selectedPlatform.value) return;
-  isSubmitting.value = true;
-  try {
-    const payload = {
-      documentType: formData.documentType,
-      documentNumber: formData.documentNumber,
-      fullName: formData.fullName,
-      eps: formData.eps || 'N/A',
-      supervisorId: formData.supervisorId,
-      reportMonth: formData.mes,
-      reportYear: formData.anio,
-      platform: selectedPlatform.value,
-      platformData: { ...formData }
-    };
-    delete payload.platformData.documentType;
-    delete payload.platformData.documentNumber;
-    delete payload.platformData.fullName;
-    delete payload.platformData.eps;
-    delete payload.platformData.supervisorId;
-    delete payload.platformData.reportMonth;
-    delete payload.platformData.reportYear;
-
-    console.log('Enviando datos a /reports:', payload);
-    await postData('/reports', payload);
-    closeModal();
-
-    $q.notify({
-      color: 'positive',
-      position: 'top',
-      message: 'Solicitud enviada a la cola de procesamiento.',
-      icon: 'check_circle'
-    });
-  } catch (error) {
-    console.error('Error al enviar solicitud:', error);
-    $q.notify({
-      color: 'negative',
-      position: 'top',
-      message: 'Error al enviar la solicitud',
-      icon: 'report_problem'
-    });
-  } finally {
-    isSubmitting.value = false;
-  }
+const goToSupervisor = () => {
+  const authStore = useAuthStore();
+  authStore.clearToken();
+  router.push('/login');
 };
 </script>
 
 <style scoped>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
-.form-modal-card {
+.home-page-premium {
   font-family: 'Inter', sans-serif;
+  background-color: #f8fafc;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: 100vh;
+}
+
+.page-container {
+  max-width: 1000px;
   width: 100%;
-  max-width: 900px;
-  background: #f8fafc;
-  display: flex;
-  flex-direction: column;
-  max-height: 100vh;
-  border-radius: 0;
+  padding: 2rem 2rem; /* Reduced padding for logo */
 }
 
-.modal-bar {
-  padding: 0.5rem 1rem;
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.bar-logo {
-  width: 36px;
-  height: 36px;
+.logo-container-home {
+  margin: 0 auto 2rem;
   background: white;
-  border-radius: 8px;
+  width: 80px;
+  height: 80px;
+  border-radius: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 4px;
+  padding: 12px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+  border: 1px solid #e2e8f0;
 }
 
-.bar-logo-img {
+.home-logo {
   width: 100%;
   height: 100%;
   object-fit: contain;
 }
 
-.bar-title {
+.hero-title {
+  font-size: 2.5rem;
+  font-weight: 800;
+  line-height: 1.15;
+  margin-bottom: 1rem;
+  letter-spacing: -0.02em;
+  color: #0f172a;
+}
+
+.accent-text { color: #2e7d32; }
+
+.hero-desc {
+  color: #64748b;
+  font-size: 1.1rem;
+}
+
+/* Action Cards */
+.action-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 2rem;
+  margin-top: 2rem;
+}
+
+.action-card {
+  background-color: white;
+  border-radius: 32px;
+  display: flex;
+  overflow: hidden;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.03);
+  border: 1px solid #e2e8f0;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.action-card:hover { 
+  transform: translateY(-8px);
+  box-shadow: 0 20px 50px rgba(0,0,0,0.08);
+}
+
+.card-visual-side {
+  flex: 0 0 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.card-visual-side.green { background-color: #ecfdf4; }
+.card-visual-side.dark { background-color: #f1f5f9; }
+
+.visual-icon-box {
+  width: 70px;
+  height: 70px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+}
+
+.visual-icon-box.green { background-color: #2e7d32; color: white; }
+.visual-icon-box.dark { background-color: #0f172a; color: white; }
+
+.card-body {
+  padding: 2rem;
   display: flex;
   flex-direction: column;
 }
 
-.bar-title-main {
-  font-size: 0.95rem;
+.card-title {
+  font-size: 1.5rem;
   font-weight: 800;
-  line-height: 1.2;
+  margin-bottom: 0.5rem;
+  color: #0f172a;
 }
 
-.bar-title-sub {
-  font-size: 0.6rem;
+.card-text {
+  color: #64748b;
+  margin-bottom: 1.5rem;
+  font-size: 1rem;
+}
+
+.btn-action {
+  padding: 0.75rem 1.5rem;
+  border-radius: 12px;
   font-weight: 800;
-  color: rgba(255,255,255,0.7);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.modal-body {
-  flex: 1;
-  overflow-y: auto;
-  padding-top: 1rem;
-}
-
-.form-section-container {
-  background: white;
-  border: 1px solid #f1f5f9;
-  border-radius: 16px;
-  padding: 1rem;
-  margin-bottom: 1rem;
-}
-
-.section-header {
+  font-size: 0.9rem;
   display: flex;
   align-items: center;
-  border-bottom: 1px dashed #e2e8f0;
-  padding-bottom: 0.5rem;
-  margin-bottom: 1rem;
+  gap: 0.75rem;
+  border: none;
+  width: fit-content;
+  transition: all 0.2s;
 }
 
-.section-label {
-  font-size: 0.8rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
+.btn-action.primary { background-color: #2e7d32; color: white; }
+.btn-action.secondary { background-color: #0f172a; color: white; }
+
+/* Platforms Grid */
+.platforms-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.25rem;
+  margin: 1rem auto 0;
+  max-width: 600px;
+}
+
+
+.platform-card-premium {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 1.25rem;
+  background-color: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.platform-card-premium:hover {
+  transform: translateY(-4px);
+  border-color: #2e7d32;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.04);
+}
+
+.bg-mi_planilla { background: linear-gradient(135deg, #FF9800 0%, #F57C00 100%); }
+.bg-aportes_en_linea { background: linear-gradient(135deg, #FF9800 0%, #1B5E20 100%); }
+
+
+.platform-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.platform-name {
+  font-size: 1.1rem;
+  font-weight: 700;
   color: #1e293b;
 }
 
-.field-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.field-label {
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: #64748b;
-  margin-left: 0.25rem;
-}
-
-:deep(.premium-input .q-field__control) {
-  border-radius: 10px !important;
-  background-color: #f8fafc;
-  transition: all 0.2s ease;
-  height: 40px !important;
-  min-height: 40px !important;
-}
-
-:deep(.premium-input .q-field__control:before) {
-  border: 1px solid #e2e8f0 !important;
-}
-
-:deep(.premium-input .q-field__control:after) {
-  border-width: 2px !important;
-}
-
-:deep(.premium-input.q-field--focused .q-field__control) {
-  background-color: white;
-  box-shadow: 0 0 0 4px rgba(57, 169, 0, 0.08);
-}
-
-:deep(.premium-input .q-field__native),
-:deep(.premium-input .q-field__input) {
+.platform-action {
+  font-size: 0.8rem;
   font-weight: 500;
-  color: #0f172a;
-  font-size: 0.85rem;
+  color: #64748b;
 }
 
-.submit-btn-premium {
+.btn-back {
+  background: white;
+  border: 1px solid #e2e8f0;
+  color: #64748b;
+  padding: 0.75rem 1.5rem;
   border-radius: 12px;
-  padding: 0.6rem 2.5rem;
-  font-weight: 800;
-  font-size: 0.95rem;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  font-weight: 700;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 auto;
+  transition: all 0.2s;
 }
 
-.submit-btn-premium:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 15px rgba(57, 169, 0, 0.2);
+.btn-back:hover {
+  background-color: #f1f5f9;
+  color: #0f172a;
 }
 
 .fade-in {
-  animation: fadeIn 0.4s ease-out;
+  animation: fadeIn 0.5s ease-out;
 }
 
 @keyframes fadeIn {
@@ -442,7 +333,9 @@ const onSubmit = async () => {
   to { opacity: 1; transform: translateY(0); }
 }
 
-@media (max-width: 600px) {
-  .form-section-container { padding: 0.75rem; border-radius: 12px; }
+@media (max-width: 900px) {
+  .action-cards-grid, .platforms-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>
