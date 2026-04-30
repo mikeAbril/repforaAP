@@ -1,5 +1,6 @@
 import Supervisor from "../models/Supervisor.js";
 import bcrypt from "bcryptjs";
+import { encrypt } from "../utils/crypto.js";
 
 /**
  * Extrae el ID de la carpeta de una URL de Google Drive si es necesario.
@@ -50,8 +51,16 @@ export const getProfile = async (req, res, next) => {
  */
 export const updateProfile = async (req, res, next) => {
     try {
-        const { apiKey } = req.body;
+        let { apiKey } = req.body;
         const supervisorId = req.supervisor.id;
+
+        if (apiKey !== undefined) {
+            if (apiKey.trim() === "") {
+                apiKey = null;
+            } else {
+                apiKey = encrypt(apiKey.trim());
+            }
+        }
 
         const supervisor = await Supervisor.findByIdAndUpdate(
             supervisorId, 
@@ -75,13 +84,14 @@ export const updateProfile = async (req, res, next) => {
  */
 export const adminCreateSupervisor = async (req, res, next) => {
     try {
-        const { ...rest } = req.body;
+        const { apiKey, ...rest } = req.body;
         // La contraseña es SIEMPRE el número de documento al crear desde el panel admin
         const hashedPassword = await bcrypt.hash(rest.documentNumber, 10);
 
         const newSupervisor = new Supervisor({
             ...rest,
-            password: hashedPassword
+            password: hashedPassword,
+            apiKey: apiKey ? encrypt(apiKey.trim()) : null
         });
 
         await newSupervisor.save();
@@ -113,6 +123,15 @@ export const adminUpdateSupervisor = async (req, res, next) => {
         // Si viene contraseña, hashearla
         if (updates.password) {
             updates.password = await bcrypt.hash(updates.password, 10);
+        }
+
+        // Si viene apiKey, encriptarla
+        if (updates.apiKey !== undefined) {
+            if (updates.apiKey.trim() === "") {
+                updates.apiKey = null;
+            } else {
+                updates.apiKey = encrypt(updates.apiKey.trim());
+            }
         }
 
         const supervisor = await Supervisor.findByIdAndUpdate(id, updates, { new: true, runValidators: true }).select("-password");

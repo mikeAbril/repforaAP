@@ -19,7 +19,7 @@ const createSupervisor = async (name, documentType, documentNumber, email, passw
         console.log("✅ Conectado a MongoDB");
 
         const hashedPassword = await bcrypt.hash(password, 10);
-        
+
         const existing = await Supervisor.findOne({ documentType, documentNumber: documentNumber.trim() });
         if (existing) {
             console.log("⚠️ El supervisor ya existe con ese tipo y número de documento.");
@@ -52,7 +52,7 @@ const createSupervisor = async (name, documentType, documentNumber, email, passw
 };
 
 // Uso: node scripts/addSupervisor.js "Nombre" "CC" "12345678" "correo@ejemplo.com" "password123" ["apiKey"]
-const [,, name, docType, docNum, email, pass, apiKey] = process.argv;
+const [, , name, docType, docNum, email, pass, apiKey] = process.argv;
 
 if (!name || !docType || !docNum || !email || !pass) {
     console.log("Uso: node scripts/addSupervisor.js \"Nombre\" \"TipoDoc\" \"Documento\" \"Email\" \"password\" [\"apiKey\"]");

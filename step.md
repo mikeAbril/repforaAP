@@ -15,24 +15,24 @@ Este documento detalla el progreso actual del proyecto según los nuevos requeri
 
 ### 1. Seguridad y Cifrado de la API Key
 
-- [ ] **Crear `backEnd/utils/crypto.js`**: Implementar la utilidad de cifrado/descifrado (AES-256). _(Nota: Actualmente el archivo no existe en la carpeta `utils` a pesar de la intención)._
-- [ ] **Ajustar el Modelo `Supervisor`**: Para usar AES-256 correctamente de forma segura, el modelo `Supervisor` debería guardar también el "IV" (Vector de Inicialización) junto con el `apiKey` cifrado.
-- [ ] **Ajustar `supervisorController.js`**: Implementar el cifrado del `apiKey` cuando se guarde en el perfil de base de datos.
-- [ ] **Ajustar `captchaService.js`**: Recuperar el `apiKey` del supervisor según el reporte, descifrarlo usando `crypto.js` y usarlo en lugar de recuperar la llave de `process.env.TWOCAPTCHA_API_KEY`.
+- [x] **Crear `backEnd/utils/crypto.js`**: Implementar la utilidad de cifrado/descifrado (AES-256).
+- [x] **Ajustar el Modelo `Supervisor`**: Guardar la `apiKey` encriptada (el IV se guarda junto al texto usando formato `iv:encrypted`).
+- [x] **Ajustar `supervisorController.js`**: Implementar el cifrado del `apiKey` cuando se crea o edita desde el panel admin.
+- [x] **Ajustar `scraperRunner.js`**: Recuperar el `apiKey` del supervisor según el reporte, descifrarlo usando `crypto.js` y enviarlo a los scrapers.
 
 ### 2. Flujo de Onboarding y Autenticación
 
-- [ ] **Contraseña por defecto**: Asegurar que en el script de creación o lógica de registro el password inicial sea igual al `documentNumber`.
-- [ ] **Forzar cambio de contraseña**: Agregar un flag (ej. `requiresPasswordChange`) en `Supervisor`. Al iniciar sesión, retornar un estado que obligue al frontend a mostrar la pantalla de cambio de clave.
-- [ ] **Obligar ingreso de API Key**: Validar y forzar que el supervisor ingrese su clave de 2Captcha en el mismo modal de primer login si no la tiene configurada.
+- [x] **Contraseña por defecto**: Al crear un supervisor desde el panel de admin, la contraseña inicial es igual al `documentNumber`.
+- [x] **Forzar cambio de contraseña**: Implementado. Al iniciar sesión por primera vez, el sistema obliga al supervisor a cambiar su contraseña mediante la vista `ChangePasswordView.vue`.
+- [x] **Gestión individual de API Key**: Implementado en el panel del supervisor (`SupervisorView.vue`), permitiendo al usuario ingresar su clave de 2Captcha y consultar una guía de ayuda interactiva.
 
 ### 3. Validaciones de la API Key en el Backend
 
-- [ ] **Endpoint de Validación**: Antes de guardar el `apiKey` introducido por el usuario, el backend debe realizar una petición GET a la API de balance de 2Captcha (`https://2captcha.com/res.php?key=YOUR_API_KEY&action=getbalance`) para asegurar que la llave es válida y tiene saldo.
+- [ ] **Endpoint de Validación**: Antes de guardar el `apiKey` introducido por el usuario, el backend debe realizar una petición GET a la API de balance de 2Captcha para asegurar que la llave es válida y tiene saldo.
 
 ### 4. Accesos Públicos de Google Drive
 
-- [x] **Ajustar `driveService.js`**: Tras la subida del PDF, consumir la API de Drive para manipular los permisos del archivo subido haciéndolo público (rol `reader`, tipo `anyone`), garantizando que la URL del dashboard sea accesible sin tener que iniciar sesión en Google.
+- [x] **Ajustar `driveService.js`**: Tras la subida del PDF, consumir la API de Drive para manipular los permisos del archivo subido haciéndolo público.
 
 ### 5. Interfaz de Tabla de Certificados (Frontend Vue)
 
@@ -43,24 +43,23 @@ Este documento detalla el progreso actual del proyecto según los nuevos requeri
 ### 6. Modo Manual (Bypass del Scraper)
 
 - [ ] **Ajustar el Botón de Acción**: En caso de fallo o ausencia de saldo/clave en 2Captcha, el supervisor puede accionar un botón "Resolver Manual".
-- [ ] **Trigger Headless**: Modificar el endpoint del runner o scraper en el backend para poder aceptar un flag `manual: true`, que fuerce `headless: false` de Playwright, levantando el Chromium en la máquina (requiere consideraciones especiales si esto corre en un VPS/Servidor).
+- [ ] **Trigger Headless**: Modificar el endpoint del runner o scraper en el backend para poder aceptar un flag `manual: true`.
 
 ### 7. Validaciones Finales en Reportes
 
-- [ ] **Integridad de Estado**: Agregar lógica en las validaciones u on-save hooks de Mongoose para impedir que un reporte pase a estado "Completado" (o `downloaded`) si el campo `driveUrl` está vacío.
+- [ ] **Integridad de Estado**: Agregar lógica en las validaciones u on-save hooks de Mongoose para impedir que un reporte pase a estado "Completado".
 
 ### 8. Implementación de Notificaciones (Nodemailer)
 
-- [ ] Crear backEnd/utils/mailer.js: Implementar un utilitario centralizado para el envío de correos electrónicos utilizando la librería Nodemailer.
-- [ ] Función Universal de Envío: Desarrollar una única función exportable que simplifique el proceso, requiriendo exclusivamente tres parámetros:
+- [x] **Crear `backEnd/utils/nodemailer.js`**: Implementar un utilitario centralizado para el envío de correos.
+- [x] **Función Universal de Envío**: Diseñada con diseño premium institucional (colores SENA, sombreados, nota de confidencialidad).
+- [x] **Configuración por Variables de Entorno**: Transportador preconfigurado desde el `.env`.
 
-- to: Correo del destinatario.
+### 9. Gestión de Administradores (Nuevo)
 
-- subject: Asunto del mensaje.
-
-- htmlContent: Cuerpo del mensaje (soporte para HTML/Texto).
-
-- [ ] Configuración por Variables de Entorno: El transportador (transporter) debe estar preconfigurado para leer el host, puerto y credenciales (user/pass) desde el archivo .env, permitiendo que la función se llame desde cualquier controlador (como en el onboarding o reportes) con una sola línea de código.
+- [x] **Roles**: Implementación de roles `admin` y `supervisor` en el modelo y tokens JWT.
+- [x] **Panel Frontend**: Creación de `AdminSupervisorsView.vue` para CRUD completo de usuarios.
+- [x] **Seguridad Backend**: Middlewares de autenticación y rol protegiendo las rutas `/api/supervisors/admin`.
 
 ---
 
