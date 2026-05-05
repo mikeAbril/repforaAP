@@ -5,17 +5,13 @@
       <!-- Card Header -->
       <q-card-section class="header-section">
         <div class="row items-center no-wrap">
-          <q-btn flat round dense color="grey-7" class="q-mr-md" @click="goBack">
-            <span class="material-symbols-outlined" style="font-size: 20px">arrow_back</span>
-          </q-btn>
+          <q-btn flat round dense icon="arrow_back" color="grey-7" class="q-mr-md" @click="goBack" />
           <div class="header-content">
             <h1 class="form-title">Solicitud de Certificado</h1>
             <p class="form-subtitle text-uppercase">{{ config.title }}</p>
           </div>
           <q-space />
-          <q-btn flat round dense color="grey-4" @click="goBack">
-            <span class="material-symbols-outlined" style="font-size: 20px">close</span>
-          </q-btn>
+          <q-btn flat round dense icon="close" color="grey-4" @click="goBack" />
         </div>
       </q-card-section>
 
@@ -24,7 +20,7 @@
           
           <div v-for="(section, sIdx) in config.sections" :key="sIdx" class="form-section-container">
             <div class="section-header q-mb-sm">
-              <span class="material-symbols-outlined q-mr-sm" style="font-size: 18px; color: var(--color_button)">{{ section.icon }}</span>
+              <q-icon :name="section.icon" color="primary" size="18px" class="q-mr-sm" />
               <span class="section-label">{{ section.title }}</span>
             </div>
             
@@ -97,6 +93,7 @@
               :loading="isSubmitting"
             >
               <div class="row items-center no-wrap">
+                <q-icon name="cloud_upload" class="q-mr-md" />
                 <span class="q-mr-md">Enviar Solicitud</span>
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polyline points="22 2 15 22 11 13 2 9 22 2"/></svg>
               </div>

@@ -4,9 +4,7 @@
 
       <header class="admin-header row items-center justify-between q-mb-xl">
         <div class="header-left row items-center no-wrap">
-          <q-btn flat round class="q-mr-md back-btn-green" @click="router.push('/supervisor')">
-            <span class="material-symbols-outlined" style="font-size: 22px">arrow_back</span>
-          </q-btn>
+          <q-btn flat round icon="arrow_back" class="q-mr-md back-btn-green" @click="router.push('/supervisor')" />
           <div>
             <h1 class="admin-title">Gestión de Supervisores</h1>
             <p class="admin-subtitle">Administración total de cuentas y permisos</p>
@@ -17,7 +15,7 @@
           unelevated
           @click="openCreateDialog"
         >
-          <span class="material-symbols-outlined q-mr-sm" style="font-size: 20px">add</span>
+          <q-icon name="add" class="q-mr-sm" size="20px" />
           Nuevo Supervisor
         </q-btn>
       </header>
@@ -36,8 +34,7 @@
           >
             <template v-slot:body-cell-actions="props">
               <q-td :props="props">
-                <q-btn round size="xs" color="green-10" @click="editSupervisor(props.row)">
-                  <span class="material-symbols-outlined" style="font-size: 16px">edit</span>
+                <q-btn round size="xs" color="green-10" icon="edit" @click="editSupervisor(props.row)">
                   <q-tooltip>Editar Supervisor</q-tooltip>
                 </q-btn>
               </q-td>
@@ -89,7 +86,7 @@
                     :rules="[val => (val && val.trim().length > 0) || 'El campo es requerido']"
                   >
                     <template v-slot:prepend>
-                      <span class="material-symbols-outlined">badge</span>
+                      <q-icon name="badge" />
                     </template>
                   </q-input>
                 </div>
@@ -102,7 +99,7 @@
                     mask="####/##/##"
                   >
                     <template v-slot:prepend>
-                      <span class="material-symbols-outlined">edit_calendar</span>
+                      <q-icon name="edit_calendar" />
                     </template>
                   </q-input>
                 </div>
@@ -117,7 +114,7 @@
                     :rules="[val => (val && val.trim().length > 0) || 'El campo es requerido']"
                   >
                     <template v-slot:prepend>
-                      <span class="material-symbols-outlined">person</span>
+                      <q-icon name="person" />
                     </template>
                   </q-input>
                 </div>
@@ -132,7 +129,7 @@
                     :rules="[val => (val && val.trim().length > 0) || 'El campo es requerido']"
                   >
                     <template v-slot:prepend>
-                      <span class="material-symbols-outlined">email</span>
+                      <q-icon name="email" />
                     </template>
                   </q-input>
                 </div>

@@ -21,12 +21,11 @@
               flat
               round
               dense
+              icon="arrow_back"
               color="white"
               class="back-btn"
               @click="router.push('/')"
-            >
-              <span class="material-symbols-outlined" style="font-size: 20px">arrow_back</span>
-            </q-btn>
+            />
           </div>
 
           <!-- Right Side: Form -->
@@ -64,7 +63,7 @@
                       :rules="[val => val && val.length > 0 || 'Campo obligatorio']"
                     >
                       <template v-slot:prepend>
-                        <span class="material-symbols-outlined" style="font-size: 20px; color: #9e9e9e">person</span>
+                        <q-icon name="person" color="grey-6" size="20px" />
                       </template>
                     </q-input>
                   </div>
@@ -84,18 +83,17 @@
                   :rules="[val => val && val.length > 0 || 'Campo obligatorio']"
                 >
                   <template v-slot:prepend>
-                    <span class="material-symbols-outlined" style="font-size: 20px; color: #9e9e9e">lock</span>
+                    <q-icon name="lock" color="grey-6" size="20px" />
                   </template>
                   <template v-slot:append>
                     <q-btn
                       flat
                       round
                       dense
+                      :icon="showPassword ? 'visibility_off' : 'visibility'"
                       color="grey-6"
                       @click="showPassword = !showPassword"
-                    >
-                      <span class="material-symbols-outlined" style="font-size: 20px">{{ showPassword ? 'visibility_off' : 'visibility' }}</span>
-                    </q-btn>
+                    />
                   </template>
                 </q-input>
               </div>
@@ -117,7 +115,7 @@
               </q-btn>
 
               <p class="security-footer">
-                <span class="material-symbols-outlined q-mr-xs" style="font-size: 14px">security</span>
+                <q-icon name="security" size="14px" class="q-mr-xs" />
                 Acceso restringido para personal autorizado.
               </p>
             </q-form>

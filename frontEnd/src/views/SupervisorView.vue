@@ -21,7 +21,7 @@
             @click="router.push('/admin/supervisors')"
           >
             <div class="row items-center no-wrap">
-              <span class="material-symbols-outlined q-mr-sm" style="font-size: 18px">admin_panel_settings</span>
+              <q-icon name="admin_panel_settings" size="18px" class="q-mr-sm" />
               <span>Gestión Admin</span>
             </div>
           </q-btn>
@@ -31,7 +31,7 @@
             @click="showSettings = true"
           >
             <div class="row items-center no-wrap">
-              <span class="material-symbols-outlined q-mr-sm" style="font-size: 18px">person</span>
+              <q-icon name="person" size="18px" class="q-mr-sm" />
               <span>Mi Perfil</span>
             </div>
           </q-btn>
@@ -41,7 +41,7 @@
             @click="logout"
           >
             <div class="row items-center no-wrap">
-              <span class="material-symbols-outlined q-mr-sm" style="font-size: 18px">logout</span>
+              <q-icon name="logout" size="18px" class="q-mr-sm" />
               <span>Salir</span>
             </div>
           </q-btn>
@@ -52,7 +52,7 @@
       <div class="analytics-grid q-mb-xl">
         <div class="stat-card-premium primary">
           <div class="stat-icon-box">
-            <span class="material-symbols-outlined" style="font-size: 24px">description</span>
+            <q-icon name="description" size="24px" />
           </div>
           <div class="stat-content">
             <span class="stat-label">Total Solicitudes</span>
@@ -66,7 +66,7 @@
         <div class="config-card">
           <div class="row items-center q-gutter-x-md no-wrap">
             <div class="config-icon-box">
-              <span class="material-symbols-outlined" style="font-size: 24px; color: var(--color_button)">key</span>
+              <q-icon name="key" size="24px" color="primary" />
             </div>
             <div class="config-info col">
               <div class="row items-center">
@@ -88,7 +88,7 @@
                 hide-bottom-space
               >
                 <template v-slot:prepend>
-                  <span class="material-symbols-outlined" style="font-size: 18px; color: var(--text-muted)">key</span>
+                  <q-icon name="key" size="18px" color="grey-6" />
                 </template>
               </q-input>
               <q-btn
@@ -131,7 +131,7 @@
                 clearable
               >
                 <template v-slot:prepend>
-                  <span class="material-symbols-outlined" style="font-size: 18px; color: var(--text-muted)">search</span>
+                  <q-icon name="search" size="18px" color="grey-6" />
                 </template>
               </q-input>
             </div>
@@ -185,7 +185,7 @@
               class="print-btn"
               @click="printTable"
             >
-              <span class="material-symbols-outlined q-mr-xs" style="font-size: 18px">print</span>
+              <q-icon name="print" size="18px" class="q-mr-xs" />
             </q-btn>
           </div>
 
@@ -231,10 +231,10 @@
                     :href="props.row.driveUrl"
                     target="_blank"
                   >
-                    <span class="material-symbols-outlined q-ml-sm" style="font-size: 16px">open_in_new</span>
+                    <q-icon name="open_in_new" size="16px" class="q-ml-sm" />
                   </q-btn>
                   <div v-else-if="props.row.status === 'error'" class="text-error-action cursor-pointer" @click="showError(props.row.errorReason)">
-                    <span class="material-symbols-outlined q-mr-xs" style="font-size: 16px; color: var(--negative, #C10015)">info</span>
+                    <q-icon name="info" size="16px" class="q-mr-xs" color="negative" />
                     <span style="color: var(--negative, #C10015); font-size: 0.8rem; font-weight: 600;">Ver Error</span>
                   </div>
                   <span v-else class="text-grey-4">-</span>
@@ -252,7 +252,7 @@
                     color="red"
                     @click="confirmDelete(props.row)"
                   >
-                    <span class="material-symbols-outlined" style="font-size: 18px">delete</span>
+                    <q-icon name="delete" size="18px" />
                     <q-tooltip>Eliminar reporte</q-tooltip>
                   </q-btn>
                   <span v-else class="text-grey-4">-</span>
@@ -293,9 +293,7 @@
               <span class="dialog-subtitle">Información técnica del supervisor</span>
             </div>
             <q-space />
-            <q-btn flat round dense size="sm" class="text-white" v-close-popup>
-              <span class="material-symbols-outlined" style="font-size: 20px">close</span>
-            </q-btn>
+            <q-btn icon="close" flat round dense size="sm" class="text-white" v-close-popup />
           </div>
         </q-card-section>
 
@@ -311,7 +309,7 @@
                 class="premium-input-readonly"
               >
                 <template v-slot:prepend>
-                  <span class="material-symbols-outlined" style="font-size: 20px">person</span>
+                  <q-icon name="person" size="20px" />
                 </template>
               </q-input>
             </div>
@@ -326,13 +324,13 @@
                 class="premium-input-readonly"
               >
                 <template v-slot:prepend>
-                  <span class="material-symbols-outlined" style="font-size: 20px">badge</span>
+                  <q-icon name="badge" size="20px" />
                 </template>
               </q-input>
             </div>
 
             <div class="info-notice row items-start no-wrap q-pa-md">
-              <span class="material-symbols-outlined q-mr-md" style="font-size: 20px; color: var(--text-muted)">lock</span>
+              <q-icon name="lock" size="20px" color="grey-6" class="q-mr-md" />
               <p class="notice-text">
                 Esta información es gestionada por el administrador. <br>
                 Si requiere cambios, por favor realice una solicitud formal.
@@ -349,9 +347,7 @@
           <q-card-section class="row items-center q-pb-none">
             <div class="text-h6 fw-800">¿Cómo obtener mi API Key?</div>
             <q-space />
-            <q-btn flat round dense v-close-popup color="grey-7">
-              <span class="material-symbols-outlined" style="font-size: 20px">close</span>
-            </q-btn>
+            <q-btn icon="close" flat round dense v-close-popup color="grey-7" />
           </q-card-section>
 
           <q-card-section class="q-pa-lg">
@@ -383,9 +379,7 @@
             </div>
 
             <q-banner dense class="bg-blue-1 text-blue-9 rounded-borders q-mt-md">
-              <template v-slot:avatar>
-                <span class="material-symbols-outlined" style="font-size: 20px; color: #1565c0">info</span>
-              </template>
+                <q-icon name="info" size="20px" color="blue-8" />
               Esta clave permite que el sistema resuelva los retos visuales de las plataformas de forma automática.
             </q-banner>
           </q-card-section>
@@ -397,9 +391,7 @@
           <q-card-section class="row items-center q-pb-none">
             <div class="text-h6">Editar API Key</div>
             <q-space />
-            <q-btn flat round dense v-close-popup>
-              <span class="material-symbols-outlined" style="font-size: 20px">close</span>
-            </q-btn>
+            <q-btn icon="close" flat round dense v-close-popup />
           </q-card-section>
           <q-card-section class="q-pt-md">
             <q-input
@@ -410,7 +402,7 @@
               dense
             >
               <template v-slot:prepend>
-                <span class="material-symbols-outlined" style="font-size: 18px; color: var(--text-muted)">key</span>
+                <q-icon name="key" size="18px" color="grey-6" />
               </template>
             </q-input>
           </q-card-section>
