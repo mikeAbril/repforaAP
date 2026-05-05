@@ -13,12 +13,12 @@
         <p class="hero-desc">Seleccione la plataforma para procesar su certificado.</p>
       </header>
 
-      <q-form @submit="onSubmit" class="q-gutter-y-md form-content">
+      <q-form ref="formRef" @submit="onSubmit" class="q-gutter-y-md form-content">
 
         <!-- Sección: Selección de Plataforma -->
         <div class="form-section-container fade-in">
           <div class="section-header q-mb-sm">
-            <span class="material-symbols-outlined q-mr-sm" style="font-size: 20px; color: var(--color_button)">cloud_queue</span>
+            <q-icon name="sym_o_cloud_queue" size="20px" color="primary" class="q-mr-sm" />
             <span class="section-label">Plataforma de Seguridad Social</span>
           </div>
           <div class="row q-col-gutter-md">
@@ -50,7 +50,7 @@
             class="form-section-container fade-in"
           >
             <div class="section-header q-mb-sm">
-              <span class="material-symbols-outlined q-mr-sm" style="font-size: 20px; color: var(--color_button)">{{ section.icon }}</span>
+              <q-icon :name="section.icon" color="primary" size="20px" class="q-mr-sm" />
               <span class="section-label">{{ section.title }}</span>
             </div>
 
@@ -83,7 +83,7 @@
                     class="style-select"
                   >
                     <template v-slot:prepend>
-                      <span class="material-symbols-outlined" style="font-size: 20px">{{ getIcon(field.name) }}</span>
+                      <q-icon :name="'sym_o_' + getIcon(field.name)" size="20px" />
                     </template>
                     <template v-slot:no-option>
                       <q-item>
@@ -110,7 +110,33 @@
                     ]"
                   >
                     <template v-slot:prepend>
-                      <span class="material-symbols-outlined" style="font-size: 20px">{{ getIcon(field.name) }}</span>
+                      <q-icon :name="'sym_o_' + getIcon(field.name)" size="20px" />
+                    </template>
+                  </q-input>
+
+                  <q-input
+                    v-else-if="field.type === 'date'"
+                    filled
+                    v-model="formData[field.name]"
+                    :label="getPlaceholder(field.name)"
+                    dense
+                    readonly
+                    lazy-rules
+                    :rules="[val => (val !== null && val !== undefined && val !== '') || 'El campo es requerido']"
+                  >
+                    <template v-slot:prepend>
+                      <q-icon :name="'sym_o_' + getIcon(field.name)" size="20px" />
+                    </template>
+                    <template v-slot:append>
+                      <q-icon name="sym_o_event" class="cursor-pointer">
+                        <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                          <q-date v-model="formData[field.name]" mask="YYYY-MM-DD">
+                            <div class="row items-center justify-end">
+                              <q-btn v-close-popup label="Cerrar" color="primary" flat />
+                            </div>
+                          </q-date>
+                        </q-popup-proxy>
+                      </q-icon>
                     </template>
                   </q-input>
                 </div>
@@ -147,6 +173,7 @@ import { postData, getData } from '@/services/apiClient';
 const router = useRouter();
 const $q = useQuasar();
 const isSubmitting = ref(false);
+const formRef = ref(null);
 const selectedPlatform = ref(null);
 
 const platformOptions = [
@@ -266,6 +293,10 @@ const onSubmit = async () => {
       documentType: formData.documentType,
       documentNumber: formData.documentNumber,
       fullName: formData.fullName,
+      email: formData.email,
+      documentIssueDate: formData.documentIssueDate
+        ? formData.documentIssueDate.replace(/\//g, '-')
+        : null,
       eps: formData.eps || 'N/A',
       supervisorId: formData.supervisorId,
       reportMonth: formData.mes,
@@ -276,29 +307,32 @@ const onSubmit = async () => {
     delete payload.platformData.documentType;
     delete payload.platformData.documentNumber;
     delete payload.platformData.fullName;
+    delete payload.platformData.email;
+    delete payload.platformData.documentIssueDate;
     delete payload.platformData.eps;
     delete payload.platformData.supervisorId;
-    delete payload.platformData.reportMonth;
-    delete payload.platformData.reportYear;
 
     console.log('Enviando datos a /reports:', payload);
     await postData('/reports', payload);
-    initFormData(null);
-    selectedPlatform.value = null;
-
+    
     $q.notify({
       color: 'positive',
       position: 'top',
       message: 'Solicitud enviada a la cola de procesamiento.',
-      icon: 'check_circle'
+      icon: 'sym_o_check_circle'
     });
+
+    // Esperar a que el usuario vea la notificación antes de recargar la página
+    setTimeout(() => {
+      window.location.reload();
+    }, 2500);
   } catch (error) {
     console.error('Error al enviar solicitud:', error);
     $q.notify({
       color: 'negative',
       position: 'top',
       message: 'Error al enviar la solicitud',
-      icon: 'report_problem'
+      icon: 'sym_o_report_problem'
     });
   } finally {
     isSubmitting.value = false;

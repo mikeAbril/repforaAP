@@ -21,7 +21,7 @@
             @click="router.push('/admin/supervisors')"
           >
             <div class="row items-center no-wrap">
-              <span class="material-symbols-outlined q-mr-sm" style="font-size: 18px">admin_panel_settings</span>
+              <q-icon name="sym_o_admin_panel_settings" size="18px" class="q-mr-sm" />
               <span>Gestión Admin</span>
             </div>
           </q-btn>
@@ -31,7 +31,7 @@
             @click="showSettings = true"
           >
             <div class="row items-center no-wrap">
-              <span class="material-symbols-outlined q-mr-sm" style="font-size: 18px">person</span>
+              <q-icon name="sym_o_person" size="18px" class="q-mr-sm" />
               <span>Mi Perfil</span>
             </div>
           </q-btn>
@@ -41,7 +41,7 @@
             @click="logout"
           >
             <div class="row items-center no-wrap">
-              <span class="material-symbols-outlined q-mr-sm" style="font-size: 18px">logout</span>
+              <q-icon name="sym_o_logout" size="18px" class="q-mr-sm" />
               <span>Salir</span>
             </div>
           </q-btn>
@@ -52,7 +52,7 @@
       <div class="analytics-grid q-mb-xl">
         <div class="stat-card-premium primary">
           <div class="stat-icon-box">
-            <span class="material-symbols-outlined" style="font-size: 24px">description</span>
+            <q-icon name="sym_o_description" size="24px" />
           </div>
           <div class="stat-content">
             <span class="stat-label">Total Solicitudes</span>
@@ -66,7 +66,7 @@
         <div class="config-card">
           <div class="row items-center q-gutter-x-md no-wrap">
             <div class="config-icon-box">
-              <span class="material-symbols-outlined" style="font-size: 24px; color: var(--color_button)">key</span>
+              <q-icon name="sym_o_key" size="24px" color="primary" />
             </div>
             <div class="config-info col">
               <div class="row items-center">
@@ -79,24 +79,34 @@
             </div>
             <div class="config-action row items-center q-gutter-x-sm">
               <q-input
+                v-if="!profile.apiKey"
                 outlined
-                v-model="profile.apiKey"
+                v-model="newApiKey"
                 label="Introduzca su API Key"
                 class="api-key-input"
                 dense
                 hide-bottom-space
               >
                 <template v-slot:prepend>
-                  <span class="material-symbols-outlined" style="font-size: 18px; color: var(--text-muted)">vpn_key</span>
+                  <q-icon name="sym_o_key" size="18px" color="grey-6" />
                 </template>
               </q-input>
               <q-btn
+                v-if="!profile.apiKey"
                 class="bg-green-9 text-white save-config-btn"
                 unelevated
                 :loading="savingApiKey"
                 @click="updateApiKey"
               >
                 Guardar
+              </q-btn>
+              <q-btn
+                v-if="profile.apiKey"
+                class="bg-blue-9 text-white save-config-btn"
+                unelevated
+                @click="openApiKeyModal"
+              >
+                Editar
               </q-btn>
             </div>
           </div>
@@ -121,15 +131,67 @@
                 clearable
               >
                 <template v-slot:prepend>
-                  <span class="material-symbols-outlined" style="font-size: 18px; color: var(--text-muted)">search</span>
+                  <q-icon name="sym_o_search" size="18px" color="grey-6" />
                 </template>
               </q-input>
             </div>
           </div>
 
+          <div class="row q-px-lg q-py-sm q-gutter-sm items-center filter-row">
+            <q-select
+              outlined
+              dense
+              v-model="filterPlatform"
+              :options="platformOptions"
+              label="Plataforma"
+              emit-value
+              map-options
+              clearable
+              style="min-width: 180px"
+              class="filter-select"
+            />
+            <q-select
+              outlined
+              dense
+              v-model="filterYear"
+              :options="yearOptions"
+              label="Año"
+              emit-value
+              map-options
+              clearable
+              style="min-width: 120px"
+              class="filter-select"
+              @update:model-value="val => { if (!val) filterMonth = null }"
+            />
+            <q-select
+              v-if="filterYear"
+              outlined
+              dense
+              v-model="filterMonth"
+              :options="monthOptions"
+              label="Mes"
+              emit-value
+              map-options
+              clearable
+              style="min-width: 150px"
+              class="filter-select"
+            />
+            <q-space />
+            <q-btn
+              flat
+              dense
+              no-caps
+              label="Imprimir"
+              class="print-btn"
+              @click="printTable"
+            >
+              <q-icon name="sym_o_print" size="18px" class="q-mr-xs" />
+            </q-btn>
+          </div>
+
           <q-separator color="grey-1" />
 
-          <div class="q-pa-md">
+          <div class="q-pa-md" ref="tableRef">
             <q-table
               flat
               bordered
@@ -169,12 +231,30 @@
                     :href="props.row.driveUrl"
                     target="_blank"
                   >
-                    <span class="material-symbols-outlined q-ml-sm" style="font-size: 16px">open_in_new</span>
+                    <q-icon name="sym_o_open_in_new" size="16px" class="q-ml-sm" />
                   </q-btn>
                   <div v-else-if="props.row.status === 'error'" class="text-error-action cursor-pointer" @click="showError(props.row.errorReason)">
-                    <span class="material-symbols-outlined q-mr-xs" style="font-size: 16px; color: var(--negative, #C10015)">info</span>
+                    <q-icon name="sym_o_info" size="16px" class="q-mr-xs" color="negative" />
                     <span style="color: var(--negative, #C10015); font-size: 0.8rem; font-weight: 600;">Ver Error</span>
                   </div>
+                  <span v-else class="text-grey-4">-</span>
+                </q-td>
+              </template>
+
+              <template v-slot:body-cell-actions="props">
+                <q-td :props="props">
+                  <q-btn
+                    v-if="props.row.status !== 'success' && props.row.status !== 'downloaded'"
+                    flat
+                    dense
+                    round
+                    size="sm"
+                    color="red"
+                    @click="confirmDelete(props.row)"
+                  >
+                    <q-icon name="sym_o_delete" size="18px" />
+                    <q-tooltip>Eliminar reporte</q-tooltip>
+                  </q-btn>
                   <span v-else class="text-grey-4">-</span>
                 </q-td>
               </template>
@@ -213,7 +293,7 @@
               <span class="dialog-subtitle">Información técnica del supervisor</span>
             </div>
             <q-space />
-            <q-btn icon="close" flat round dense size="sm" class="text-white" v-close-popup />
+            <q-btn icon="sym_o_close" flat round dense size="sm" class="text-white" v-close-popup />
           </div>
         </q-card-section>
 
@@ -229,7 +309,7 @@
                 class="premium-input-readonly"
               >
                 <template v-slot:prepend>
-                  <span class="material-symbols-outlined" style="font-size: 20px">person</span>
+                  <q-icon name="sym_o_person" size="20px" />
                 </template>
               </q-input>
             </div>
@@ -244,13 +324,13 @@
                 class="premium-input-readonly"
               >
                 <template v-slot:prepend>
-                  <span class="material-symbols-outlined" style="font-size: 20px">badge</span>
+                  <q-icon name="sym_o_badge" size="20px" />
                 </template>
               </q-input>
             </div>
 
             <div class="info-notice row items-start no-wrap q-pa-md">
-              <span class="material-symbols-outlined q-mr-md" style="font-size: 20px; color: var(--text-muted)">lock</span>
+              <q-icon name="sym_o_lock" size="20px" color="grey-6" class="q-mr-md" />
               <p class="notice-text">
                 Esta información es gestionada por el administrador. <br>
                 Si requiere cambios, por favor realice una solicitud formal.
@@ -267,7 +347,7 @@
           <q-card-section class="row items-center q-pb-none">
             <div class="text-h6 fw-800">¿Cómo obtener mi API Key?</div>
             <q-space />
-            <q-btn icon="close" flat round dense v-close-popup color="grey-7" />
+            <q-btn icon="sym_o_close" flat round dense v-close-popup color="grey-7" />
           </q-card-section>
 
           <q-card-section class="q-pa-lg">
@@ -299,12 +379,44 @@
             </div>
 
             <q-banner dense class="bg-blue-1 text-blue-9 rounded-borders q-mt-md">
-              <template v-slot:avatar>
-                <q-icon name="info" color="blue-8" />
-              </template>
+                <q-icon name="sym_o_info" size="20px" color="blue-8" />
               Esta clave permite que el sistema resuelva los retos visuales de las plataformas de forma automática.
             </q-banner>
           </q-card-section>
+        </q-card>
+      </q-dialog>
+
+      <q-dialog v-model="showApiKeyModal" persistent backdrop-filter="blur(10px)">
+        <q-card style="min-width: 420px; border-radius: 16px;">
+          <q-card-section class="row items-center q-pb-none">
+            <div class="text-h6">Editar API Key</div>
+            <q-space />
+            <q-btn icon="sym_o_close" flat round dense v-close-popup />
+          </q-card-section>
+          <q-card-section class="q-pt-md">
+            <q-input
+              outlined
+              v-model="editApiKeyValue"
+              label="API Key de 2Captcha"
+              class="q-mb-md"
+              dense
+            >
+              <template v-slot:prepend>
+                <q-icon name="sym_o_key" size="18px" color="grey-6" />
+              </template>
+            </q-input>
+          </q-card-section>
+          <q-card-actions align="right" class="q-px-lg q-pb-lg">
+            <q-btn flat label="Eliminar" color="negative" @click="deleteApiKey" class="q-mr-auto" :loading="savingApiKey" />
+            <q-btn flat label="Cancelar" v-close-popup />
+            <q-btn
+              class="bg-green-9 text-white"
+              unelevated
+              :loading="savingApiKey"
+              label="Guardar"
+              @click="saveApiKeyFromModal"
+            />
+          </q-card-actions>
         </q-card>
       </q-dialog>
 
@@ -318,11 +430,44 @@ import { useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
 import { useAuthStore } from '@/store/auth'
 import api from '@/plugins/axios'
+import html2canvas from 'html2canvas'
 
 const $q = useQuasar()
 const router = useRouter()
 const searchFilter = ref('')
+const tableRef = ref(null)
+
+const printTable = async () => {
+  if (!tableRef.value) return
+  const canvas = await html2canvas(tableRef.value, { scale: 2, useCORS: true })
+  const link = document.createElement('a')
+  link.download = `certificados_${filterYear.value || 'todos'}_${filterMonth.value || 'todos'}.png`
+  link.href = canvas.toDataURL('image/png')
+  link.click()
+}
+const filterPlatform = ref(null)
+const filterMonth = ref(null)
+const filterYear = ref(null)
+
+const platformOptions = [
+  { label: 'SOI', value: 'soi' },
+  { label: 'Aportes en Línea', value: 'aportes_en_linea' },
+  { label: 'Asopagos', value: 'asopagos' },
+  { label: 'Mi Planilla', value: 'mi_planilla' }
+]
+const monthOptions = [
+  { label: 'Enero', value: '1' }, { label: 'Febrero', value: '2' },
+  { label: 'Marzo', value: '3' }, { label: 'Abril', value: '4' },
+  { label: 'Mayo', value: '5' }, { label: 'Junio', value: '6' },
+  { label: 'Julio', value: '7' }, { label: 'Agosto', value: '8' },
+  { label: 'Septiembre', value: '9' }, { label: 'Octubre', value: '10' },
+  { label: 'Noviembre', value: '11' }, { label: 'Diciembre', value: '12' }
+]
+const yearOptions = ['2024', '2025', '2026']
+
 const showApiKeyHelp = ref(false)
+const showApiKeyModal = ref(false)
+const editApiKeyValue = ref('')
 const loading = ref(false)
 const showSettings = ref(false)
 
@@ -359,24 +504,117 @@ const fetchProfile = async () => {
   }
 }
 
+const newApiKey = ref('')
 const savingApiKey = ref(false)
 const updateApiKey = async () => {
+  if (!newApiKey.value || newApiKey.value.trim() === '') {
+    $q.notify({
+      color: 'negative',
+      message: 'Por favor, introduzca una API Key válida',
+      icon: 'sym_o_warning',
+      position: 'top'
+    })
+    return
+  }
+
   savingApiKey.value = true
   try {
-    const res = await api.put('/supervisors/profile', { apiKey: profile.value.apiKey })
+    const res = await api.put('/supervisors/profile', { apiKey: newApiKey.value.trim() })
     if (res.data.success) {
+      profile.value.apiKey = true
       $q.notify({
         color: 'positive',
         message: 'Configuración guardada correctamente',
-        icon: 'check_circle',
+        icon: 'sym_o_check_circle',
         position: 'top'
       })
     }
   } catch (error) {
+    const msg = error.response?.data?.message || 'Error al guardar la configuración'
     $q.notify({
       color: 'negative',
-      message: 'Error al guardar la configuración',
-      icon: 'warning',
+      message: msg,
+      icon: 'sym_o_warning',
+      position: 'top'
+    })
+  } finally {
+    savingApiKey.value = false
+  }
+}
+
+const openApiKeyModal = async () => {
+  try {
+    const res = await api.get('/supervisors/profile/apikey')
+    editApiKeyValue.value = res.data.apiKey || ''
+    showApiKeyModal.value = true
+  } catch (error) {
+    $q.notify({
+      color: 'negative',
+      message: 'Error al obtener la API Key',
+      icon: 'sym_o_warning',
+      position: 'top'
+    })
+  }
+}
+
+const saveApiKeyFromModal = async () => {
+  if (!editApiKeyValue.value || editApiKeyValue.value.trim() === '') {
+    $q.notify({
+      color: 'negative',
+      message: 'Por favor, introduzca una API Key válida',
+      icon: 'sym_o_warning',
+      position: 'top'
+    })
+    return
+  }
+
+  savingApiKey.value = true
+  try {
+    const res = await api.put('/supervisors/profile', { apiKey: editApiKeyValue.value.trim() })
+    if (res.data.success) {
+      showApiKeyModal.value = false
+      profile.value.apiKey = true
+      $q.notify({
+        color: 'positive',
+        message: 'API Key actualizada correctamente',
+        icon: 'sym_o_check_circle',
+        position: 'top'
+      })
+    }
+  } catch (error) {
+    const msg = error.response?.data?.message || 'Error al guardar la API Key'
+    $q.notify({
+      color: 'negative',
+      message: msg,
+      icon: 'sym_o_warning',
+      position: 'top'
+    })
+  } finally {
+    savingApiKey.value = false
+  }
+}
+
+const deleteApiKey = async () => {
+  savingApiKey.value = true
+  try {
+    // Al enviar el campo vacío, el backend lo interpreta como eliminar
+    const res = await api.put('/supervisors/profile', { apiKey: '' })
+    if (res.data.success) {
+      showApiKeyModal.value = false
+      profile.value.apiKey = false
+      $q.notify({
+        color: 'positive',
+        message: 'API Key eliminada correctamente',
+        icon: 'sym_o_check_circle',
+        position: 'top'
+      })
+    }
+  } catch (error) {
+    const msg = error.response?.data?.message || 'Error al eliminar la API Key'
+    $q.notify({
+      color: 'negative',
+      message: msg,
+      icon: 'sym_o_warning',
       position: 'top'
     })
   } finally {
@@ -395,11 +633,12 @@ const pagination = ref({
 
 const columns = [
   { name: 'createdAt', label: 'Fecha Solicitud', align: 'left', field: row => new Date(row.createdAt).toLocaleString(), sortable: true },
-  { name: 'contractor', label: 'Contratista', align: 'left', field: row => row.contractorId?.fullName || 'Desconocido' },
-  { name: 'document', label: 'Documento', align: 'left', field: row => `${row.contractorId?.documentType} ${row.contractorId?.documentNumber}` },
+  { name: 'contractor', label: 'Contratista', align: 'left', field: row => row.instructorId?.fullName || 'Desconocido' },
+  { name: 'document', label: 'Documento', align: 'left', field: row => `${row.instructorId?.documentType} ${row.instructorId?.documentNumber}` },
   { name: 'platform', label: 'Plataforma', align: 'left', field: row => formatPlatform(row.platform) },
   { name: 'status', label: 'Estado', align: 'center', field: 'status' },
-  { name: 'driveUrl', label: 'PDF Original', align: 'center', field: 'driveUrl' }
+  { name: 'driveUrl', label: 'PDF Original', align: 'center', field: 'driveUrl' },
+  { name: 'actions', label: 'Acciones', align: 'center', field: 'status' }
 ]
 
 const formatPlatform = (str) => {
@@ -421,6 +660,26 @@ const formatStatus = (status) => {
     case 'error': return 'FALLIDO'
     default: return status.toUpperCase()
   }
+}
+
+const confirmDelete = (row) => {
+  $q.dialog({
+    title: 'Eliminar reporte',
+    message: `¿Está seguro de que desea eliminar el reporte de ${row.instructorId?.fullName || 'desconocido'}? Esta acción no se puede deshacer.`,
+    cancel: { label: 'Cancelar', flat: true },
+    ok: { label: 'Eliminar', color: 'negative' },
+    persistent: true
+  }).onOk(async () => {
+    try {
+      await api.delete(`/dashboard/reports/${row._id}`)
+      $q.notify({ color: 'positive', message: 'Reporte eliminado correctamente', icon: 'sym_o_check_circle' })
+      loadReports(1)
+      loadStats()
+    } catch (error) {
+      const msg = error.response?.data?.message || 'Error al eliminar el reporte'
+      $q.notify({ color: 'negative', message: msg, icon: 'sym_o_warning' })
+    }
+  })
 }
 
 const showError = (reason) => {
@@ -449,6 +708,15 @@ const loadReports = async (page = pagination.value.page) => {
     if (searchFilter.value) {
       url += `&search=${encodeURIComponent(searchFilter.value)}`
     }
+    if (filterPlatform.value) {
+      url += `&platform=${encodeURIComponent(filterPlatform.value)}`
+    }
+    if (filterMonth.value) {
+      url += `&month=${encodeURIComponent(filterMonth.value)}`
+    }
+    if (filterYear.value) {
+      url += `&year=${encodeURIComponent(filterYear.value)}`
+    }
     const res = await api.get(url)
     if (res.data.success) {
       reports.value = res.data.data
@@ -457,13 +725,17 @@ const loadReports = async (page = pagination.value.page) => {
       pagination.value.totalPages = res.data.pagination.totalPages
     }
   } catch (error) {
-    $q.notify({ color: 'negative', message: 'Error cargando historial de certificados', icon: 'error' })
+    $q.notify({ color: 'negative', message: 'Error cargando historial de certificados', icon: 'sym_o_error' })
   } finally {
     loading.value = false
   }
 }
 
 watch(searchFilter, () => {
+  pagination.value.page = 1
+  loadReports(1)
+})
+watch([filterPlatform, filterMonth, filterYear], () => {
   pagination.value.page = 1
   loadReports(1)
 })
@@ -481,6 +753,16 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.filter-row {
+  background: var(--bg-light, #f5f5f5);
+  border-bottom: 1px solid var(--border, #e0e0e0);
+}
+
+:deep(.filter-select .q-field__control) {
+  border-radius: 8px !important;
+  height: 36px;
+  background: var(--white, #fff);
+}
 .supervisor-page-premium {
   font-family: 'Inter', sans-serif;
   background-color: var(--bg-light);

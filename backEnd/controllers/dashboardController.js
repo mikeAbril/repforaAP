@@ -103,6 +103,34 @@ export const getReports = async (req, res, next) => {
 };
 
 /**
+ * DELETE /api/dashboard/reports/:id
+ * Elimina un reporte solo si no está completado (status distinto de success/downloaded).
+ */
+export const deleteReport = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const report = await Report.findById(id);
+
+        if (!report) {
+            return res.status(404).json({ success: false, message: "Reporte no encontrado" });
+        }
+
+        if (report.status === "success" || report.status === "downloaded") {
+            return res.status(400).json({ success: false, message: "No se puede eliminar un reporte completado" });
+        }
+
+        if (report.supervisorId.toString() !== req.supervisor.id) {
+            return res.status(403).json({ success: false, message: "Sin permisos para eliminar este reporte" });
+        }
+
+        await Report.findByIdAndDelete(id);
+        res.json({ success: true, message: "Reporte eliminado correctamente" });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
  * GET /api/dashboard/stats
  * Resumen rápido de conteos por status.
  * Requiere authMiddleware.

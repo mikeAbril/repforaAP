@@ -1,11 +1,12 @@
 import { Router } from "express";
-import { 
-    listSupervisorsPublic, 
-    getProfile, 
-    updateProfile, 
-    adminCreateSupervisor, 
-    adminUpdateSupervisor, 
-    adminListAllSupervisors 
+import {
+    listSupervisorsPublic,
+    getProfile,
+    updateProfile,
+    getDecryptedApiKey,
+    adminCreateSupervisor,
+    adminUpdateSupervisor,
+    adminListAllSupervisors
 } from "../controllers/supervisorController.js";
 import { authMiddleware, roleMiddleware } from "../middlewares/authMiddleware.js";
 
@@ -16,6 +17,7 @@ router.get("/list", listSupervisorsPublic);
 
 // Rutas protegidas de perfil (Cualquier supervisor)
 router.get("/profile", authMiddleware, getProfile);
+router.get("/profile/apikey", authMiddleware, getDecryptedApiKey);
 router.put("/profile", authMiddleware, updateProfile);
 
 // Rutas de administración (Solo Admin)

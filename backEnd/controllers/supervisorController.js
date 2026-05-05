@@ -1,6 +1,6 @@
 import Supervisor from "../models/Supervisor.js";
 import bcrypt from "bcryptjs";
-import { encrypt } from "../utils/crypto.js";
+import { encrypt, decrypt } from "../utils/crypto.js";
 
 /**
  * Extrae el ID de la carpeta de una URL de Google Drive si es necesario.
@@ -46,20 +46,57 @@ export const getProfile = async (req, res, next) => {
 };
 
 /**
+ * GET /api/supervisors/profile/apikey
+ * Retorna la API Key desencriptada del supervisor autenticado.
+ */
+export const getDecryptedApiKey = async (req, res, next) => {
+    try {
+        const supervisor = await Supervisor.findById(req.supervisor.id).select("apiKey");
+        if (!supervisor || !supervisor.apiKey) {
+            return res.json({ success: true, apiKey: null });
+        }
+        const apiKey = decrypt(supervisor.apiKey);
+        res.json({ success: true, apiKey });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
  * PUT /api/supervisors/profile
  * Permite al supervisor actualizar su apiKey de 2Captcha.
+ * Valida la key contra 2Captcha antes de guardar.
  */
 export const updateProfile = async (req, res, next) => {
     try {
         let { apiKey } = req.body;
         const supervisorId = req.supervisor.id;
 
-        if (apiKey !== undefined) {
-            if (apiKey.trim() === "") {
-                apiKey = null;
-            } else {
-                apiKey = encrypt(apiKey.trim());
+        if (apiKey !== undefined && apiKey.trim() !== "") {
+            apiKey = apiKey.trim();
+            // Validar con 2Captcha antes de guardar
+            try {
+                const balanceUrl = `https://api.2captcha.com/res.php?key=${encodeURIComponent(apiKey)}&action=getbalance&json=1`;
+                const response = await fetch(balanceUrl);
+                const data = await response.json();
+
+                if (data.status === 0) {
+                    return res.status(400).json({
+                        success: false,
+                        message: "API Key inválida. Verifique e intente de nuevo."
+                    });
+                }
+
+                apiKey = encrypt(apiKey);
+            } catch (fetchError) {
+                console.error("Error validando API Key con 2Captcha:", fetchError.message);
+                return res.status(502).json({
+                    success: false,
+                    message: "No se pudo validar la API Key con 2Captcha. Intente más tarde."
+                });
             }
+        } else if (apiKey !== undefined) {
+            apiKey = null;
         }
 
         const supervisor = await Supervisor.findByIdAndUpdate(

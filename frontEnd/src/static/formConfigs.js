@@ -99,7 +99,7 @@ export const formConfigs = {
     sections: [
       {
         title: 'Información del cotizante',
-        icon: 'person',
+        icon: 'sym_o_person',
         fields: [
           { 
             name: 'documentType', 
@@ -135,7 +135,7 @@ export const formConfigs = {
 
       {
         title: 'Asignación de Supervisor',
-        icon: 'supervised_user_circle',
+        icon: 'sym_o_supervised_user_circle',
         fields: [
           { 
             name: 'supervisorId', 
@@ -155,7 +155,7 @@ export const formConfigs = {
     sections: [
       {
         title: 'Información del cotizante',
-        icon: 'person',
+        icon: 'sym_o_person',
         fields: [
           { 
             name: 'documentType', 
@@ -185,7 +185,7 @@ export const formConfigs = {
 
       {
         title: 'Asignación de Supervisor',
-        icon: 'supervised_user_circle',
+        icon: 'sym_o_supervised_user_circle',
         fields: [
           { 
             name: 'supervisorId', 
@@ -205,7 +205,7 @@ export const formConfigs = {
     sections: [
       {
         title: 'Información del cotizante',
-        icon: 'person',
+        icon: 'sym_o_person',
         fields: [
           { 
             name: 'documentType', 
@@ -231,7 +231,7 @@ export const formConfigs = {
       },
       {
         title: 'Datos de la Planilla',
-        icon: 'receipt_long',
+        icon: 'sym_o_receipt_long',
         fields: [
           { name: 'numeroPlanilla', label: 'Número de Planilla', type: 'input', isNumber: true, col: 6 },
           { name: 'valorPagado', label: 'Valor Total Pagado ($)', type: 'input', isNumber: true, col: 6 },
@@ -243,7 +243,7 @@ export const formConfigs = {
 
       {
         title: 'Asignación de Supervisor',
-        icon: 'supervised_user_circle',
+        icon: 'sym_o_supervised_user_circle',
         fields: [
           { 
             name: 'supervisorId', 
@@ -263,7 +263,7 @@ export const formConfigs = {
     sections: [
       {
         title: 'Información del cotizante',
-        icon: 'person',
+        icon: 'sym_o_person',
         fields: [
           { 
             name: 'documentType', 
@@ -278,7 +278,7 @@ export const formConfigs = {
             col: 6 
           },
           { name: 'documentNumber', label: 'No. de documento', type: 'input', isNumber: true, col: 6 },
-          { name: 'documentIssueDate', label: 'Fecha de Expedición (AAAA/MM/DD)', type: 'input', mask: '####/##/##', col: 6 },
+          { name: 'documentIssueDate', label: 'Fecha de Expedición (AAAA-MM-DD)', type: 'date', col: 6 },
           { name: 'fullName', label: 'Nombre Completo', type: 'input', col: 6 },
           { name: 'email', label: 'Correo Electrónico', type: 'input', col: 6 },
           { name: 'eps', label: 'EPS', type: 'select', options: epsOptionsPure, allowNewValue: true, col: 12 },
@@ -289,7 +289,7 @@ export const formConfigs = {
 
       {
         title: 'Asignación de Supervisor',
-        icon: 'supervised_user_circle',
+        icon: 'sym_o_supervised_user_circle',
         fields: [
           { 
             name: 'supervisorId', 
