@@ -5,13 +5,17 @@
       <!-- Card Header -->
       <q-card-section class="header-section">
         <div class="row items-center no-wrap">
-          <q-btn flat round dense icon="arrow_back" color="grey-7" class="q-mr-md" @click="goBack" />
+          <q-btn flat round dense color="grey-7" class="q-mr-md" @click="goBack">
+            <span class="material-symbols-outlined" style="font-size: 20px">arrow_back</span>
+          </q-btn>
           <div class="header-content">
             <h1 class="form-title">Solicitud de Certificado</h1>
             <p class="form-subtitle text-uppercase">{{ config.title }}</p>
           </div>
           <q-space />
-          <q-btn flat round dense icon="close" color="grey-4" @click="goBack" />
+          <q-btn flat round dense color="grey-4" @click="goBack">
+            <span class="material-symbols-outlined" style="font-size: 20px">close</span>
+          </q-btn>
         </div>
       </q-card-section>
 
@@ -20,7 +24,7 @@
           
           <div v-for="(section, sIdx) in config.sections" :key="sIdx" class="form-section-container">
             <div class="section-header q-mb-sm">
-              <q-icon :name="section.icon" color="primary" size="xs" class="q-mr-sm" />
+              <span class="material-symbols-outlined q-mr-sm" style="font-size: 18px; color: var(--color_button)">{{ section.icon }}</span>
               <span class="section-label">{{ section.title }}</span>
             </div>
             
@@ -254,7 +258,7 @@ const onSubmit = async () => {
       color: 'negative',
       position: 'top',
       message: 'Error al enviar la solicitud',
-      icon: 'report_problem'
+      icon: 'warning'
     });
   } finally {
     isSubmitting.value = false;

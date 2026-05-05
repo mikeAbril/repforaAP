@@ -6,7 +6,7 @@
       <div class="info-side">
         <div class="info-content">
           <div class="security-icon-box q-mb-lg">
-            <q-icon name="security" size="48px" color="white" />
+            <span class="material-symbols-outlined" style="font-size: 48px; color: white">security</span>
           </div>
           <h1 class="info-title">Actualice su <br> Contraseña</h1>
           <p class="info-description">
@@ -15,11 +15,11 @@
           </p>
           <div class="security-checklist">
             <div class="check-item">
-              <q-icon name="check_circle" color="green-4" size="xs" class="q-mr-sm" />
+              <span class="material-symbols-outlined q-mr-sm" style="font-size: 18px; color: #66bb6a">check_circle</span>
               <span>Mínimo 6 caracteres</span>
             </div>
             <div class="check-item">
-              <q-icon name="check_circle" color="green-4" size="xs" class="q-mr-sm" />
+              <span class="material-symbols-outlined q-mr-sm" style="font-size: 18px; color: #66bb6a">check_circle</span>
               <span>Combine letras y números</span>
             </div>
           </div>
@@ -48,15 +48,16 @@
               ]"
             >
               <template v-slot:prepend>
-                <q-icon name="lock_outline" color="primary" />
+                <span class="material-symbols-outlined" style="font-size: 20px; color: var(--q-primary)">lock</span>
               </template>
               <template v-slot:append>
                 <q-btn 
                   flat round dense 
-                  :icon="showPassword ? 'visibility_off' : 'visibility'" 
                   @click="showPassword = !showPassword"
                   color="grey-6"
-                />
+                >
+                  <span class="material-symbols-outlined" style="font-size: 20px">{{ showPassword ? 'visibility_off' : 'visibility' }}</span>
+                </q-btn>
               </template>
             </q-input>
           </div>
@@ -75,15 +76,16 @@
               ]"
             >
               <template v-slot:prepend>
-                <q-icon name="lock_reset" color="primary" />
+                <span class="material-symbols-outlined" style="font-size: 20px; color: var(--q-primary)">lock_open</span>
               </template>
               <template v-slot:append>
                 <q-btn 
                   flat round dense 
-                  :icon="showConfirmPassword ? 'visibility_off' : 'visibility'" 
                   @click="showConfirmPassword = !showConfirmPassword"
                   color="grey-6"
-                />
+                >
+                  <span class="material-symbols-outlined" style="font-size: 20px">{{ showConfirmPassword ? 'visibility_off' : 'visibility' }}</span>
+                </q-btn>
               </template>
             </q-input>
           </div>
@@ -97,12 +99,12 @@
           >
             <div class="row items-center no-wrap">
               <span class="q-mr-md">Guardar y Continuar</span>
-              <q-icon name="chevron_right" />
+              <span class="material-symbols-outlined" style="font-size: 20px">chevron_right</span>
             </div>
           </q-btn>
 
           <p class="security-footer">
-            <q-icon name="verified_user" size="14px" class="q-mr-xs" />
+            <span class="material-symbols-outlined q-mr-xs" style="font-size: 14px">verified_user</span>
             Sus datos están encriptados mediante protocolos de seguridad.
           </p>
         </q-form>
@@ -154,7 +156,7 @@ const onSubmit = async () => {
     $q.notify({
       color: 'negative',
       message: msg,
-      icon: 'report_problem'
+      icon: 'warning'
     })
   } finally {
     loading.value = false

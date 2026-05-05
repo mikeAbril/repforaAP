@@ -278,7 +278,7 @@ export const formConfigs = {
             col: 6 
           },
           { name: 'documentNumber', label: 'No. de documento', type: 'input', isNumber: true, col: 6 },
-          { name: 'documentIssueDate', label: 'Fecha de Expedición (AAAA/MM/DD)', type: 'input', mask: '####/##/##', col: 6 },
+          { name: 'documentIssueDate', label: 'Fecha de Expedición (AAAA-MM-DD)', type: 'input', mask: '####-##-##', col: 6 },
           { name: 'fullName', label: 'Nombre Completo', type: 'input', col: 6 },
           { name: 'email', label: 'Correo Electrónico', type: 'input', col: 6 },
           { name: 'eps', label: 'EPS', type: 'select', options: epsOptionsPure, allowNewValue: true, col: 12 },

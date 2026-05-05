@@ -4,7 +4,9 @@
 
       <header class="admin-header row items-center justify-between q-mb-xl">
         <div class="header-left row items-center no-wrap">
-          <q-btn flat round icon="arrow_back" class="q-mr-md back-btn-green" @click="router.push('/supervisor')" />
+          <q-btn flat round class="q-mr-md back-btn-green" @click="router.push('/supervisor')">
+            <span class="material-symbols-outlined" style="font-size: 22px">arrow_back</span>
+          </q-btn>
           <div>
             <h1 class="admin-title">Gestión de Supervisores</h1>
             <p class="admin-subtitle">Administración total de cuentas y permisos</p>
@@ -15,7 +17,7 @@
           unelevated
           @click="openCreateDialog"
         >
-          <q-icon name="add" class="q-mr-sm" />
+          <span class="material-symbols-outlined q-mr-sm" style="font-size: 20px">add</span>
           Nuevo Supervisor
         </q-btn>
       </header>
@@ -34,7 +36,8 @@
           >
             <template v-slot:body-cell-actions="props">
               <q-td :props="props">
-                <q-btn round size="xs" color="green-10" icon="edit" @click="editSupervisor(props.row)">
+                <q-btn round size="xs" color="green-10" @click="editSupervisor(props.row)">
+                  <span class="material-symbols-outlined" style="font-size: 16px">edit</span>
                   <q-tooltip>Editar Supervisor</q-tooltip>
                 </q-btn>
               </q-td>

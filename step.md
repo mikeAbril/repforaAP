@@ -28,7 +28,7 @@ Este documento detalla el progreso actual del proyecto según los nuevos requeri
 
 ### 3. Validaciones de la API Key en el Backend
 
-- [ ] **Endpoint de Validación**: Antes de guardar el `apiKey` introducido por el usuario, el backend debe realizar una petición GET a la API de balance de 2Captcha para asegurar que la llave es válida y tiene saldo.
+- [x] **Endpoint de Validación**: Antes de guardar el `apiKey` introducido por el usuario, el backend debe realizar una petición GET a la API de balance de 2Captcha para asegurar que la llave es válida y tiene saldo.
 
 ### 4. Accesos Públicos de Google Drive
 
@@ -38,16 +38,6 @@ Este documento detalla el progreso actual del proyecto según los nuevos requeri
 
 - [ ] **Nuevos Filtros**: Modificar el componente de datos para incluir filtros por **Mes**, **Año** y **Plataforma**.
 - [ ] **Botón Screenshot**: Añadir una funcionalidad para hacer captura de la tabla filtrada (usando bibliotecas como `html2canvas`).
-- [ ] **Columna "Resolución"**: Indicar si el certificado fue obtenido de manera "Automática" o "Manual".
-
-### 6. Modo Manual (Bypass del Scraper)
-
-- [ ] **Ajustar el Botón de Acción**: En caso de fallo o ausencia de saldo/clave en 2Captcha, el supervisor puede accionar un botón "Resolver Manual".
-- [ ] **Trigger Headless**: Modificar el endpoint del runner o scraper en el backend para poder aceptar un flag `manual: true`.
-
-### 7. Validaciones Finales en Reportes
-
-- [ ] **Integridad de Estado**: Agregar lógica en las validaciones u on-save hooks de Mongoose para impedir que un reporte pase a estado "Completado".
 
 ### 8. Implementación de Notificaciones (Nodemailer)
 

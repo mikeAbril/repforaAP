@@ -14,7 +14,7 @@ import { scrapeMiPlanilla } from "./miPlanillaScraper.js";
 
 import { uploadToDrive, setupSupervisorFolder, checkIfFolderExists } from "../services/driveService.js";
 import { decrypt } from "../utils/crypto.js";
- 
+
 let isRunnerRunning = false;
 
 const __filename = fileURLToPath(import.meta.url);
@@ -95,24 +95,24 @@ const processPendingReports = async (platform) => {
     for (const report of pendingReports) {
         try {
             // 1. Obtener una versión fresca del reporte y marcar como processing
-            const currentReport = await Report.findById(report._id);
-            if (!currentReport || currentReport.status !== "pending") continue;
+            const current = await Report.findById(report._id);
+            if (!current || current.status !== "pending") continue;
 
-            currentReport.status = "processing";
-            currentReport.attempts = (currentReport.attempts || 0) + 1;
-            await currentReport.save();
+            current.status = "processing";
+            current.attempts = (current.attempts || 0) + 1;
+            await current.save();
 
             // Obtener datos del instructor
-            const instructor = await Instructor.findById(report.instructorId);
+            const instructor = await Instructor.findById(current.instructorId);
             if (!instructor) {
-                throw new Error(`Instructor ${report.instructorId} no encontrado`);
+                throw new Error(`Instructor ${current.instructorId} no encontrado`);
             }
 
             // Obtener el supervisor para su API Key de 2Captcha
             let decryptedApiKey = null;
             let supervisorName = null;
-            if (report.supervisorId) {
-                const supervisor = await Supervisor.findById(report.supervisorId);
+            if (current.supervisorId) {
+                const supervisor = await Supervisor.findById(current.supervisorId);
                 if (supervisor) {
                     supervisorName = supervisor.name;
                     if (supervisor.apiKey) {
@@ -126,69 +126,61 @@ const processPendingReports = async (platform) => {
                 instructor: {
                     documentType: instructor.documentType,
                     documentNumber: instructor.documentNumber,
-                    eps: report.eps,
+                    eps: current.eps,
                     fullName: instructor.fullName,
                     email: instructor.email,
                     documentIssueDate: instructor.documentIssueDate,
-                    apiKey: decryptedApiKey, // Enviamos la clave ya desencriptada
+                    apiKey: decryptedApiKey,
                 },
-                platformData: report.platformData,
+                platformData: current.platformData,
             };
 
             // Ejecutar scraper
             const result = await scraperFn(reportData, DOWNLOADS_DIR);
 
             if (result.success) {
-                report.status = "success";
-                report.filePath = result.filePath;
-                report.errorReason = null;
-                console.log(`✅ Reporte ${report._id} — PDF descargado`);
+                current.status = "success";
+                current.filePath = result.filePath;
+                current.errorReason = null;
+                console.log(`✅ Reporte ${current._id} — PDF descargado`);
 
                 // Subir a Google Drive
                 try {
-                    // Calculamos el periodo de pago (mes vencido: mes consulta + 1)
-                    const paymentMonth = (report.reportMonth % 12) + 1;
-                    const paymentYear = paymentMonth === 1 ? report.reportYear + 1 : report.reportYear;
-
-                    const finalMes = paymentMonth;
-                    const finalAnio = paymentYear;
+                    const paymentMonth = (current.reportMonth % 12) + 1;
+                    const paymentYear = paymentMonth === 1 ? current.reportYear + 1 : current.reportYear;
 
                     const driveResult = await uploadToDrive(
                         result.filePath,
                         instructor.fullName,
-                        finalAnio,
-                        finalMes,
+                        paymentYear,
+                        paymentMonth,
                         instructor.documentType,
                         instructor.documentNumber,
                         supervisorName
                     );
 
-                    report.driveFileId = driveResult.driveFileId;
-                    report.driveUrl = driveResult.driveUrl;
-                    report.status = "downloaded";
-                    console.log(`☁️  Reporte ${report._id} — subido a Drive`);
+                    current.driveFileId = driveResult.driveFileId;
+                    current.driveUrl = driveResult.driveUrl;
+                    current.status = "downloaded";
+                    console.log(`☁️  Reporte ${current._id} — subido a Drive`);
 
-                    // Eliminar PDF local después de subir
                     fs.unlinkSync(result.filePath);
                 } catch (driveError) {
-                    // Si falla Drive, el PDF local sigue disponible
-                    console.error(`⚠️  Drive falló para ${report._id}: ${driveError.message}`);
-                    // Status queda en 'success' con filePath local
+                    console.error(`⚠️  Drive falló para ${current._id}: ${driveError.message}`);
                 }
             } else {
-                // Lógica de re-intento inteligente (Máximo 3 intentos)
-                if (report.attempts < 3) {
-                    report.status = "pending";
-                    report.errorReason = `Reintento ${report.attempts}/3: ${result.error}`;
-                    console.log(`🔄 Reporte ${report._id} falló (${report.attempts}/3). Volviendo a pending...`);
+                if (current.attempts < 3) {
+                    current.status = "pending";
+                    current.errorReason = `Reintento ${current.attempts}/3: ${result.error}`;
+                    console.log(`🔄 Reporte ${current._id} falló (${current.attempts}/3). Volviendo a pending...`);
                 } else {
-                    report.status = "error";
-                    report.errorReason = `Máximo de intentos alcanzado (3/3): ${result.error}`;
-                    console.log(`❌ Reporte ${report._id} falló definitivamente tras 3 intentos.`);
+                    current.status = "error";
+                    current.errorReason = `Máximo de intentos alcanzado (3/3): ${result.error}`;
+                    console.log(`❌ Reporte ${current._id} falló definitivamente tras 3 intentos.`);
                 }
             }
 
-            await report.save();
+            await current.save();
         } catch (error) {
             // Error no detiene los demás reportes
             if (report.attempts < 3) {
@@ -200,7 +192,7 @@ const processPendingReports = async (platform) => {
                 report.errorReason = `Crash definitivo (3/3): ${error.message}`;
                 console.log(`❌ Reporte ${report._id} crasheó definitivamente.`);
             }
-            await report.save();
+            await report.save().catch(e => console.error(`⚠️  No se pudo actualizar estado del reporte ${report._id}:`, e.message));
         }
     }
 };
@@ -254,30 +246,30 @@ const runScraperCycle = async () => {
     try {
         console.log(`\n⏰ [${new Date().toLocaleTimeString()}] Iniciando ciclo de scraping...`);
 
-    ensureDownloadsDir();
+        ensureDownloadsDir();
 
-    // 1. Limpiar reportes estancados primero
-    await recoverStuckReports();
+        // 1. Limpiar reportes estancados primero
+        await recoverStuckReports();
 
-    // 2. Limpiar imágenes temporales viejas (> 30 min) para mantener orden
-    const files = fs.readdirSync(DOWNLOADS_DIR);
-    const now = Date.now();
-    files.forEach(file => {
-        if (file.endsWith(".png") || file.endsWith(".jpg")) {
-            const filePath = path.join(DOWNLOADS_DIR, file);
-            const stats = fs.statSync(filePath);
-            if (now - stats.mtime.getTime() > 30 * 60 * 1000) {
-                fs.unlinkSync(filePath);
+        // 2. Limpiar imágenes temporales viejas (> 30 min) para mantener orden
+        const files = fs.readdirSync(DOWNLOADS_DIR);
+        const now = Date.now();
+        files.forEach(file => {
+            if (file.endsWith(".png") || file.endsWith(".jpg")) {
+                const filePath = path.join(DOWNLOADS_DIR, file);
+                const stats = fs.statSync(filePath);
+                if (now - stats.mtime.getTime() > 30 * 60 * 1000) {
+                    fs.unlinkSync(filePath);
+                }
             }
+        });
+
+        // 3. Procesar pendientes de cada plataforma
+        for (const platform of Object.keys(SCRAPER_MAP)) {
+            await processPendingReports(platform);
         }
-    });
 
-    // 3. Procesar pendientes de cada plataforma
-    for (const platform of Object.keys(SCRAPER_MAP)) {
-        await processPendingReports(platform);
-    }
-
-    console.log(`✔️  Ciclo completado.\n`);
+        console.log(`✔️  Ciclo completado.\n`);
     } finally {
         isRunnerRunning = false;
     }
@@ -288,7 +280,7 @@ const runScraperCycle = async () => {
  */
 export const startScraperCron = () => {
     // Todos los días a las 2:00 AM
-    cron.schedule("18  20 * * *", async () => {
+    cron.schedule("19  20 * * *", async () => {
         try {
             await runScraperCycle();
         } catch (error) {
