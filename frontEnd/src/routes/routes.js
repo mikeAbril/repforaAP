@@ -1,6 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import MainLayout from '@/layouts/MainLayout.vue'
-import CardTest from '@/views/CardTest.vue'
+import InstructorView from '@/views/InstructorView.vue'
 import LoginView from '@/views/LoginView.vue'
 import SupervisorView from '@/views/SupervisorView.vue'
 import AdminSupervisorsView from '@/views/AdminSupervisorsView.vue'
@@ -19,12 +19,13 @@ const routes = [
         path: '/',
         component: MainLayout,
         children: [
-            { path: '', name: 'Home', component: CardTest },
-            { 
-                path: 'form/:platform', 
-                name: 'UnifiedForm', 
+            { path: '', name: 'Home', component: HomeView },
+            { path: 'instructor', name: 'Instructor', component: InstructorView },
+            {
+                path: 'form/:platform',
+                name: 'UnifiedForm',
                 component: UnifiedForm,
-                props: true 
+                props: true
             },
             {
                 path: 'change-password',
@@ -75,8 +76,8 @@ router.beforeEach((to, from) => {
 
     if (to.meta.requiresAuth && !isAuthenticated) {
         return { name: 'Login' };
-    } 
-    
+    }
+
     // Si debe cambiar contraseña y no está en la página de cambio de clave, forzar redirección
     if (isAuthenticated && mustChange && to.name !== 'ChangePassword') {
         return { name: 'ChangePassword' };

@@ -1,7 +1,7 @@
 <template>
   <q-page class="supervisor-page-premium q-pa-lg">
     <div class="page-container">
-      
+
       <!-- Premium Header -->
       <header class="dashboard-header row items-center justify-between q-mb-xl">
         <div class="header-left row items-center no-wrap">
@@ -14,37 +14,34 @@
           </div>
         </div>
         <div class="header-actions row q-gutter-x-md">
-          <q-btn 
+          <q-btn
             v-if="profile.role === 'admin'"
-            flat 
-            color="primary" 
+            flat
             class="header-btn-premium admin q-mr-md"
             @click="router.push('/admin/supervisors')"
           >
             <div class="row items-center no-wrap">
-              <q-icon name="admin_panel_settings" size="xs" class="q-mr-sm" />
+              <span class="material-symbols-outlined q-mr-sm" style="font-size: 18px">admin_panel_settings</span>
               <span>Gestión Admin</span>
             </div>
           </q-btn>
-          <q-btn 
-            flat 
-            color="primary" 
+          <q-btn
+            flat
             class="header-btn-premium secondary"
             @click="showSettings = true"
           >
             <div class="row items-center no-wrap">
-              <q-icon name="person_outline" size="xs" class="q-mr-sm" />
+              <span class="material-symbols-outlined q-mr-sm" style="font-size: 18px">person</span>
               <span>Mi Perfil</span>
             </div>
           </q-btn>
-          <q-btn 
-            flat 
-            color="negative" 
+          <q-btn
+            flat
             class="header-btn-premium logout"
             @click="logout"
           >
             <div class="row items-center no-wrap">
-              <q-icon name="logout" size="xs" class="q-mr-sm" />
+              <span class="material-symbols-outlined q-mr-sm" style="font-size: 18px">logout</span>
               <span>Salir</span>
             </div>
           </q-btn>
@@ -55,7 +52,7 @@
       <div class="analytics-grid q-mb-xl">
         <div class="stat-card-premium primary">
           <div class="stat-icon-box">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+            <span class="material-symbols-outlined" style="font-size: 24px">description</span>
           </div>
           <div class="stat-content">
             <span class="stat-label">Total Solicitudes</span>
@@ -69,28 +66,33 @@
         <div class="config-card">
           <div class="row items-center q-gutter-x-md no-wrap">
             <div class="config-icon-box">
-              <q-icon name="vpn_key" size="24px" color="primary" />
+              <span class="material-symbols-outlined" style="font-size: 24px; color: var(--color_button)">key</span>
             </div>
             <div class="config-info col">
               <div class="row items-center">
                 <h3 class="config-title">Configuración de Solución de Captchas</h3>
-                <q-btn flat dense color="primary" label="¿Cómo obtenerla?" class="info-link q-ml-sm" @click="showApiKeyHelp = true" />
+                <q-btn flat dense class="info-link q-ml-sm" @click="showApiKeyHelp = true">
+                  <span style="color: var(--color_button); font-weight: 700; font-size: 0.85rem;">¿Cómo obtenerla?</span>
+                </q-btn>
               </div>
               <p class="config-subtitle">Ingrese su API Key de 2Captcha para automatizar procesos (Opcional)</p>
             </div>
             <div class="config-action row items-center q-gutter-x-sm">
-              <q-input 
-                outlined 
-                v-model="profile.apiKey" 
-                placeholder="Introduzca su API Key" 
+              <q-input
+                outlined
+                v-model="profile.apiKey"
+                label="Introduzca su API Key"
                 class="api-key-input"
                 dense
                 hide-bottom-space
-              />
-              <q-btn 
-                color="primary" 
-                unelevated 
-                class="save-config-btn"
+              >
+                <template v-slot:prepend>
+                  <span class="material-symbols-outlined" style="font-size: 18px; color: var(--text-muted)">vpn_key</span>
+                </template>
+              </q-input>
+              <q-btn
+                class="bg-green-9 text-white save-config-btn"
+                unelevated
                 :loading="savingApiKey"
                 @click="updateApiKey"
               >
@@ -110,17 +112,16 @@
               <p class="card-subtitle">Listado completo de trámites realizados</p>
             </div>
             <div class="header-search">
-              <q-input 
-                outlined 
-                dense 
-                v-model="searchFilter" 
-                placeholder="Buscar por contratista o documento..." 
+              <q-input
+                outlined
+                dense
+                v-model="searchFilter"
+                label="Buscar por contratista o documento..."
                 class="premium-search-input"
-                color="primary"
                 clearable
               >
                 <template v-slot:prepend>
-                  <q-icon name="search" size="xs" color="grey-6" />
+                  <span class="material-symbols-outlined" style="font-size: 18px; color: var(--text-muted)">search</span>
                 </template>
               </q-input>
             </div>
@@ -131,50 +132,58 @@
           <div class="q-pa-md">
             <q-table
               flat
+              bordered
               :rows="reports"
               :columns="columns"
               row-key="_id"
               :loading="loading"
+              no-data-label="Sin registros aún"
               v-model:pagination="pagination"
               @request="onRequest"
               hide-pagination
-              class="premium-table"
+              class="q-mx-md premium-table"
             >
               <template v-slot:body-cell-status="props">
                 <q-td :props="props">
-                  <div :class="['status-chip', props.row.status]">
-                    <span class="dot"></span>
+                  <q-badge v-if="props.row.status === 'success' || props.row.status === 'downloaded'" class="bg-green-10">
                     {{ formatStatus(props.row.status) }}
-                  </div>
+                  </q-badge>
+                  <q-badge v-else-if="props.row.status === 'error'" class="bg-red">
+                    {{ formatStatus(props.row.status) }}
+                  </q-badge>
+                  <q-badge v-else class="bg-amber-8">
+                    {{ formatStatus(props.row.status) }}
+                  </q-badge>
                 </q-td>
               </template>
 
               <template v-slot:body-cell-driveUrl="props">
                 <q-td :props="props">
-                  <q-btn 
-                    v-if="props.row.driveUrl" 
-                    flat 
-                    dense 
-                    color="primary" 
+                  <q-btn
+                    v-if="props.row.driveUrl"
+                    flat
+                    dense
                     class="table-action-btn"
-                    icon-right="open_in_new" 
-                    label="Ver PDF" 
-                    type="a" 
-                    :href="props.row.driveUrl" 
-                    target="_blank" 
-                  />
+                    label="Ver PDF"
+                    type="a"
+                    :href="props.row.driveUrl"
+                    target="_blank"
+                  >
+                    <span class="material-symbols-outlined q-ml-sm" style="font-size: 16px">open_in_new</span>
+                  </q-btn>
                   <div v-else-if="props.row.status === 'error'" class="text-error-action cursor-pointer" @click="showError(props.row.errorReason)">
-                    <q-icon name="info_outline" size="xs" class="q-mr-xs" /> Ver Error
+                    <span class="material-symbols-outlined q-mr-xs" style="font-size: 16px; color: var(--negative, #C10015)">info</span>
+                    <span style="color: var(--negative, #C10015); font-size: 0.8rem; font-weight: 600;">Ver Error</span>
                   </div>
                   <span v-else class="text-grey-4">-</span>
                 </q-td>
               </template>
 
               <template v-slot:loading>
-                <q-inner-loading showing color="primary" />
+                <q-inner-loading showing color="green-9" />
               </template>
             </q-table>
-            
+
             <div class="row justify-center q-mt-xl" v-if="pagination.totalPages > 1">
               <q-pagination
                 v-model="pagination.page"
@@ -182,7 +191,7 @@
                 :max-pages="6"
                 direction-links
                 flat
-                color="primary"
+                color="green-9"
                 class="premium-pagination"
                 @update:model-value="loadReports"
               />
@@ -196,49 +205,52 @@
     <!-- Settings Dialog Premium -->
     <q-dialog v-model="showSettings" persistent backdrop-filter="blur(10px)">
       <q-card class="settings-card-premium shadow-24">
-        <q-card-section class="row items-center q-pa-lg">
-          <div class="dialog-header">
-            <h3 class="dialog-title">Mi Perfil</h3>
-            <p class="dialog-subtitle">Información técnica del supervisor</p>
+        <q-card-section class="bg-green-9 q-px-lg">
+          <div class="row items-center q-py-sm">
+            <q-space />
+            <div class="col text-center">
+              <h5 class="q-ma-none text-white text-weight-bold text-uppercase">Mi Perfil</h5>
+              <span class="dialog-subtitle">Información técnica del supervisor</span>
+            </div>
+            <q-space />
+            <q-btn icon="close" flat round dense size="sm" class="text-white" v-close-popup />
           </div>
-          <q-space />
-          <q-btn icon="close" flat round dense v-close-popup color="grey-5" />
         </q-card-section>
 
-        <q-card-section class="q-pa-lg q-pt-none">
+        <q-card-section class="q-pa-lg">
           <div class="q-gutter-y-lg">
             <div class="field-group">
               <label class="field-label">Nombre Completo</label>
-              <q-input 
-                outlined 
-                v-model="profile.name" 
+              <q-input
+                filled
+                v-model="profile.name"
                 readonly
                 dense
                 class="premium-input-readonly"
               >
                 <template v-slot:prepend>
-                  <q-icon name="person_outline" color="primary" />
+                  <span class="material-symbols-outlined" style="font-size: 20px">person</span>
                 </template>
               </q-input>
             </div>
 
             <div class="field-group">
               <label class="field-label">Número de Documento</label>
-              <q-input 
-                outlined 
-                v-model="profile.documentNumber" 
+              <q-input
+                filled
+                v-model="profile.documentNumber"
                 readonly
                 dense
                 class="premium-input-readonly"
               >
                 <template v-slot:prepend>
-                  <q-icon name="badge" color="primary" />
+                  <span class="material-symbols-outlined" style="font-size: 20px">badge</span>
                 </template>
               </q-input>
             </div>
 
             <div class="info-notice row items-start no-wrap q-pa-md">
-              <q-icon name="lock_outline" color="grey-6" size="sm" class="q-mr-md" />
+              <span class="material-symbols-outlined q-mr-md" style="font-size: 20px; color: var(--text-muted)">lock</span>
               <p class="notice-text">
                 Esta información es gestionada por el administrador. <br>
                 Si requiere cambios, por favor realice una solicitud formal.
@@ -329,8 +341,8 @@ const stats = ref({
   downloaded: 0
 })
 
-const profile = ref({ 
-  name: '', 
+const profile = ref({
+  name: '',
   documentNumber: '',
   role: 'supervisor',
   apiKey: ''
@@ -401,15 +413,6 @@ const formatPlatform = (str) => {
   return map[str] || str.toUpperCase()
 }
 
-const getStatusColor = (status) => {
-  switch (status) {
-    case 'success': case 'downloaded': return 'positive'
-    case 'pending': case 'processing': return 'warning'
-    case 'error': return 'negative'
-    default: return 'grey'
-  }
-}
-
 const formatStatus = (status) => {
   switch (status) {
     case 'success': case 'downloaded': return 'COMPLETADO'
@@ -460,7 +463,6 @@ const loadReports = async (page = pagination.value.page) => {
   }
 }
 
-// Recargar cuando cambie el filtro (con debounce manual o directo)
 watch(searchFilter, () => {
   pagination.value.page = 1
   loadReports(1)
@@ -479,11 +481,9 @@ onMounted(() => {
 </script>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-
 .supervisor-page-premium {
   font-family: 'Inter', sans-serif;
-  background-color: #f8fafc;
+  background-color: var(--bg-light);
   min-height: 100vh;
 }
 
@@ -497,13 +497,13 @@ onMounted(() => {
 .dashboard-title {
   font-size: 1.75rem;
   font-weight: 800;
-  color: #0f172a;
+  color: var(--text-dark);
   margin: 0;
   letter-spacing: -0.02em;
 }
 
 .logo-container-mini {
-  background: white;
+  background: var(--white);
   width: 48px;
   height: 48px;
   border-radius: 12px;
@@ -512,7 +512,7 @@ onMounted(() => {
   justify-content: center;
   padding: 6px;
   box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--border);
 }
 
 .mini-logo {
@@ -522,7 +522,7 @@ onMounted(() => {
 }
 
 .dashboard-subtitle {
-  color: #64748b;
+  color: var(--text-muted);
   font-size: 0.9rem;
   margin: 0.15rem 0 0;
 }
@@ -533,21 +533,22 @@ onMounted(() => {
   font-weight: 700;
   font-size: 0.8rem;
   transition: all 0.2s;
-  background: white;
-  border: 1px solid #e2e8f0;
+  background: var(--white);
+  border: 1px solid var(--border);
+  color: var(--text-dark);
 }
 
 
 /* Scraper Config Section */
 .config-card {
-  background: white;
-  border-radius: 20px;
+  background: var(--white);
+  border-radius: var(--radius);
   padding: 1.5rem 2rem;
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.02);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
 }
 .config-icon-box {
-  background: #f0f9ff;
+  background: var(--primary-light);
   width: 50px;
   height: 50px;
   border-radius: 12px;
@@ -558,12 +559,12 @@ onMounted(() => {
 .config-title {
   font-size: 1.1rem;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--text-dark);
   margin: 0;
 }
 .config-subtitle {
   font-size: 0.85rem;
-  color: #64748b;
+  color: var(--text-muted);
   margin: 0;
 }
 .api-key-input {
@@ -583,7 +584,7 @@ onMounted(() => {
 .help-card-premium {
   width: 500px;
   max-width: 90vw;
-  border-radius: 24px;
+  border-radius: var(--radius);
 }
 .help-steps {
   display: flex;
@@ -596,7 +597,7 @@ onMounted(() => {
   align-items: flex-start;
 }
 .step-number {
-  background: #0f172a;
+  background: var(--color_button);
   color: white;
   width: 28px;
   height: 28px;
@@ -612,14 +613,12 @@ onMounted(() => {
 .step-text {
   font-size: 0.95rem;
   line-height: 1.5;
-  color: #334155;
+  color: var(--text-dark);
 }
-.fw-800 { font-weight: 800; }
-.fw-700 { font-weight: 700; }
 
 .header-btn-premium.admin:hover {
-  background-color: #f0f9ff;
-  border-color: #bae6fd;
+  background-color: var(--primary-light);
+  border-color: var(--color_button);
 }
 
 .header-btn-premium.logout:hover {
@@ -628,8 +627,8 @@ onMounted(() => {
 }
 
 .header-btn-premium.secondary:hover {
-  background-color: #f1f5f9;
-  border-color: #e2e8f0;
+  background-color: var(--bg-light);
+  border-color: var(--border);
 }
 
 /* Analytics */
@@ -640,21 +639,21 @@ onMounted(() => {
 }
 
 .stat-card-premium {
-  background: white;
-  border-radius: 24px;
+  background: var(--white);
+  border-radius: var(--radius);
   padding: 1.5rem;
   display: flex;
   align-items: center;
   gap: 1.5rem;
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.02);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
 }
 
 .stat-icon-box {
   width: 56px;
   height: 56px;
-  background-color: #ecfdf4;
-  color: #2e7d32;
+  background-color: var(--primary-light);
+  color: var(--color_button);
   border-radius: 16px;
   display: flex;
   align-items: center;
@@ -665,7 +664,7 @@ onMounted(() => {
   display: block;
   font-size: 0.8rem;
   font-weight: 700;
-  color: #64748b;
+  color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -679,34 +678,34 @@ onMounted(() => {
 
 /* History Card */
 .history-card-premium {
-  background: white;
-  border-radius: 24px;
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.02);
+  background: var(--white);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
   overflow: hidden;
 }
 
 .card-title {
   font-size: 1.25rem;
   font-weight: 800;
-  color: #0f172a;
+  color: var(--text-dark);
   margin: 0;
 }
 
 .card-subtitle {
   font-size: 0.85rem;
-  color: #64748b;
+  color: var(--text-muted);
   margin: 0.2rem 0 0;
 }
 
 /* Search Input */
 :deep(.premium-search-input .q-field__control) {
   border-radius: 12px !important;
-  background-color: #f8fafc;
+  background-color: var(--bg-light);
 }
 
 :deep(.premium-search-input .q-field__control:before) {
-  border: 1px solid #e2e8f0 !important;
+  border: 1px solid var(--border) !important;
 }
 
 /* Table */
@@ -724,74 +723,43 @@ onMounted(() => {
 
 :deep(.premium-table thead th) {
   font-weight: 700;
-  color: #64748b;
+  color: var(--text-muted);
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
 :deep(.premium-table tbody tr:hover) {
-  background-color: #f8fafc;
+  background-color: var(--bg-light);
 }
 
 :deep(.premium-table tbody td) {
   font-size: 0.85rem;
-  color: #1e293b;
+  color: var(--text-dark);
   font-weight: 500;
   padding: 0.75rem 1rem;
 }
 
-
-/* Chips */
-.status-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.4rem 0.8rem;
-  border-radius: 50px;
-  font-size: 0.75rem;
-  font-weight: 700;
-  text-transform: uppercase;
-}
-
-.status-chip.success, .status-chip.downloaded { background: #f0fdf4; color: #166534; }
-.status-chip.pending, .status-chip.processing { background: #fffbeb; color: #92400e; }
-.status-chip.error { background: #fef2f2; color: #991b1b; }
-
-.status-chip .dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-}
-
-.status-chip.success .dot, .status-chip.downloaded .dot { background: #22c55e; }
-.status-chip.pending .dot, .status-chip.processing .dot { background: #f59e0b; }
-.status-chip.error .dot { background: #ef4444; }
-
 .table-action-btn {
   font-weight: 700;
   border-radius: 8px;
+  color: var(--color_button);
 }
 
 /* Dialog */
 .settings-card-premium {
   width: 500px;
   max-width: 90vw;
-  border-radius: 28px;
-  background: white;
-}
-
-.dialog-title {
-  font-size: 1.5rem;
-  font-weight: 800;
-  color: #0f172a;
-  margin: 0;
+  border-radius: var(--radius);
+  background: var(--white);
 }
 
 .dialog-subtitle {
-  font-size: 0.85rem;
-  color: #64748b;
-  margin: 0;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: rgba(255,255,255,0.7);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .field-group {
@@ -803,24 +771,24 @@ onMounted(() => {
 .field-label {
   font-size: 0.8rem;
   font-weight: 700;
-  color: #64748b;
+  color: var(--text-muted);
   margin-left: 0.25rem;
 }
 
 :deep(.premium-input-readonly .q-field__control) {
   border-radius: 12px !important;
-  background-color: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background-color: var(--bg-light);
+  border: 1px solid var(--border);
 }
 
 .info-notice {
-  background-color: #f1f5f9;
-  border-radius: 16px;
+  background-color: var(--bg-light);
+  border-radius: var(--radius);
 }
 
 .notice-text {
   font-size: 0.8rem;
-  color: #64748b;
+  color: var(--text-muted);
   margin: 0;
   line-height: 1.5;
 }
@@ -830,4 +798,3 @@ onMounted(() => {
   .history-card-premium { border-radius: 0; border-left: none; border-right: none; }
 }
 </style>
-
