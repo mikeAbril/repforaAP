@@ -80,7 +80,7 @@ export const updateProfile = async (req, res, next) => {
                 const response = await fetch(balanceUrl);
                 const data = await response.json();
 
-                if (data.request === "ERROR_INVALID_KEY" || data.errorId) {
+                if (data.status === 0) {
                     return res.status(400).json({
                         success: false,
                         message: "API Key inválida. Verifique e intente de nuevo."

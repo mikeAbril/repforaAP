@@ -21,7 +21,7 @@
               flat
               round
               dense
-              icon="arrow_back"
+              icon="sym_o_arrow_back"
               color="white"
               class="back-btn"
               @click="router.push('/')"
@@ -63,7 +63,7 @@
                       :rules="[val => val && val.length > 0 || 'Campo obligatorio']"
                     >
                       <template v-slot:prepend>
-                        <q-icon name="person" color="grey-6" size="20px" />
+                        <q-icon name="sym_o_person" color="grey-6" size="20px" />
                       </template>
                     </q-input>
                   </div>
@@ -83,14 +83,14 @@
                   :rules="[val => val && val.length > 0 || 'Campo obligatorio']"
                 >
                   <template v-slot:prepend>
-                    <q-icon name="lock" color="grey-6" size="20px" />
+                    <q-icon name="sym_o_lock" color="grey-6" size="20px" />
                   </template>
                   <template v-slot:append>
                     <q-btn
                       flat
                       round
                       dense
-                      :icon="showPassword ? 'visibility_off' : 'visibility'"
+                      :icon="showPassword ? 'sym_o_visibility_off' : 'sym_o_visibility'"
                       color="grey-6"
                       @click="showPassword = !showPassword"
                     />
@@ -115,7 +115,7 @@
               </q-btn>
 
               <p class="security-footer">
-                <q-icon name="security" size="14px" class="q-mr-xs" />
+                <q-icon name="sym_o_security" size="14px" class="q-mr-xs" />
                 Acceso restringido para personal autorizado.
               </p>
             </q-form>
@@ -159,7 +159,7 @@ const onSubmit = async () => {
     $q.notify({
       color: 'positive',
       position: 'top',
-      icon: 'check_circle',
+      icon: 'sym_o_check_circle',
       message: 'Inicio de sesión exitoso'
     })
 
@@ -173,7 +173,7 @@ const onSubmit = async () => {
     $q.notify({
       color: 'negative',
       position: 'top',
-      icon: 'warning',
+      icon: 'sym_o_warning',
       message: errorMsg
     })
   } finally {

@@ -5,18 +5,18 @@
       <!-- Card Header -->
       <q-card-section class="header-section">
         <div class="row items-center no-wrap">
-          <q-btn flat round dense icon="arrow_back" color="grey-7" class="q-mr-md" @click="goBack" />
+          <q-btn flat round dense icon="sym_o_arrow_back" color="grey-7" class="q-mr-md" @click="goBack" />
           <div class="header-content">
             <h1 class="form-title">Solicitud de Certificado</h1>
             <p class="form-subtitle text-uppercase">{{ config.title }}</p>
           </div>
           <q-space />
-          <q-btn flat round dense icon="close" color="grey-4" @click="goBack" />
+          <q-btn flat round dense icon="sym_o_close" color="grey-4" @click="goBack" />
         </div>
       </q-card-section>
 
       <q-card-section class="q-pa-md">
-        <q-form @submit="onSubmit" class="q-gutter-y-md">
+        <q-form ref="formRef" @submit="onSubmit" class="q-gutter-y-md">
           
           <div v-for="(section, sIdx) in config.sections" :key="sIdx" class="form-section-container">
             <div class="section-header q-mb-sm">
@@ -73,10 +73,34 @@
                       val => (val !== null && val !== undefined && val !== '') || 'Este campo es obligatorio',
                       val => !field.isNumber || field.mask || /^\d+$/.test(val) || 'Solo se permiten números'
                     ]"
+                    />
+
+                  <q-input 
+                    v-else-if="field.type === 'date'"
+                    outlined 
+                    v-model="formData[field.name]" 
+                    :placeholder="field.mask ? undefined : 'Ingrese el valor...'"
+                    color="primary"
+                    dense
+                    readonly
+                    lazy-rules
+                    :rules="[
+                      val => (val !== null && val !== undefined && val !== '') || 'Este campo es obligatorio'
+                    ]"
                     class="premium-input"
-                  />
-
-
+                  >
+                    <template v-slot:append>
+                      <q-icon name="sym_o_event" class="cursor-pointer">
+                        <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                          <q-date v-model="formData[field.name]" mask="YYYY-MM-DD">
+                            <div class="row items-center justify-end">
+                              <q-btn v-close-popup label="Cerrar" color="primary" flat />
+                            </div>
+                          </q-date>
+                        </q-popup-proxy>
+                      </q-icon>
+                    </template>
+                  </q-input>
                 </div>
                 
               </div>
@@ -93,7 +117,7 @@
               :loading="isSubmitting"
             >
               <div class="row items-center no-wrap">
-                <q-icon name="cloud_upload" class="q-mr-md" />
+                <q-icon name="sym_o_cloud_upload" class="q-mr-md" />
                 <span class="q-mr-md">Enviar Solicitud</span>
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polyline points="22 2 15 22 11 13 2 9 22 2"/></svg>
               </div>
@@ -126,6 +150,7 @@ const $q = useQuasar();
 const router = useRouter();
 const config = computed(() => formConfigs[props.platform]);
 const isSubmitting = ref(false);
+const formRef = ref(null);
 
 const goBack = () => {
   router.push('/instructor');
@@ -234,28 +259,24 @@ const onSubmit = async () => {
     console.log(`🚀 Enviando datos a /reports:`, payload);
     const response = await postData('/reports', payload);
     
-    // Resetear el formulario tras éxito
-    if (config.value) {
-      config.value.sections.forEach(section => {
-        section.fields.forEach(field => {
-          formData[field.name] = null;
-        });
-      });
-    }
-    
     $q.notify({
       color: 'positive',
       position: 'top',
       message: 'Solicitud enviada a la cola de procesamiento.',
-      icon: 'check_circle'
+      icon: 'sym_o_check_circle'
     });
+
+    // Esperar a que el usuario vea la notificación antes de recargar la página
+    setTimeout(() => {
+      window.location.reload();
+    }, 2500);
   } catch (error) {
     console.error('Error al enviar solicitud:', error);
     $q.notify({
       color: 'negative',
       position: 'top',
       message: 'Error al enviar la solicitud',
-      icon: 'warning'
+      icon: 'sym_o_warning'
     });
   } finally {
     isSubmitting.value = false;
