@@ -9,13 +9,13 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.join(__dirname, "../.env") });
 
-const createAdmin = async () => {
+const createAdmin = async (name, docType, docNum, email, pass) => {
     const adminData = {
-        name: "Administrador del Sistema",
-        documentType: "CC",
-        documentNumber: "10002000",
-        email: "admin@sena.edu.co",
-        password: "AdminSena2026*",
+        name: name || "Administrador del Sistema",
+        documentType: docType || "CC",
+        documentNumber: docNum || "10002000",
+        email: email || "admin@sena.edu.co",
+        password: pass || "AdminSena2026*",
         role: "admin",
         mustChangePassword: false,
         isConfigured: true
@@ -63,4 +63,5 @@ const createAdmin = async () => {
     }
 };
 
-createAdmin();
+const [, , name, docType, docNum, email, pass] = process.argv;
+createAdmin(name, docType, docNum, email, pass);
