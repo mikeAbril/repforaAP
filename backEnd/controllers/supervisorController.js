@@ -3,15 +3,6 @@ import bcrypt from "bcryptjs";
 import { encrypt, decrypt } from "../utils/crypto.js";
 
 /**
- * Extrae el ID de la carpeta de una URL de Google Drive si es necesario.
- */
-const extractFolderId = (input) => {
-    if (!input) return null;
-    const match = input.match(/folders\/([a-zA-Z0-9_-]{25,})|id=([a-zA-Z0-9_-]{25,})/);
-    return match ? (match[1] || match[2]) : input.trim();
-};
-
-/**
  * GET /api/supervisors/list
  * Retorna una lista simple de supervisores (solo nombre e ID) 
  * para llenar el select del formulario del contratista.

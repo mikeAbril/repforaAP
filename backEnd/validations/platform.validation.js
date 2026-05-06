@@ -62,5 +62,3 @@ export const validatePlatformData = (platform, platformData) => {
 
     return { valid: true };
 };
-
-export default PLATFORM_FIELDS;

@@ -7,8 +7,6 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-// const solver = new Solver(process.env.TWOCAPTCHA_API_KEY); // Movido adentro de la función
-
 const ASOPAGOS_FORM_URL = "https://www.enlace-apb.com/interssi/descargarCertificacionPago.jsp";
 
 /**

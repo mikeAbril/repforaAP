@@ -55,7 +55,6 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/store/auth';
 
@@ -120,11 +119,6 @@ const goToSupervisor = () => {
 }
 
 .accent-text { color: #2e7d32; }
-
-.hero-desc {
-  color: #64748b;
-  font-size: 1.1rem;
-}
 
 /* Action Cards */
 .action-cards-grid {
@@ -207,76 +201,6 @@ const goToSupervisor = () => {
 
 .btn-action.primary { background-color: #2e7d32; color: white; }
 .btn-action.secondary { background-color: #0f172a; color: white; }
-
-/* Platforms Grid */
-.platforms-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 1.25rem;
-  margin: 1rem auto 0;
-  max-width: 600px;
-}
-
-
-.platform-card-premium {
-  display: flex;
-  align-items: center;
-  gap: 1.25rem;
-  padding: 1.25rem;
-  background-color: white;
-  border: 1px solid #e2e8f0;
-  border-radius: 16px;
-  cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.platform-card-premium:hover {
-  transform: translateY(-4px);
-  border-color: #2e7d32;
-  box-shadow: 0 10px 20px rgba(0,0,0,0.04);
-}
-
-.bg-mi_planilla { background: linear-gradient(135deg, #FF9800 0%, #F57C00 100%); }
-.bg-aportes_en_linea { background: linear-gradient(135deg, #FF9800 0%, #1B5E20 100%); }
-
-
-.platform-info {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-}
-
-.platform-name {
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: #1e293b;
-}
-
-.platform-action {
-  font-size: 0.8rem;
-  font-weight: 500;
-  color: #64748b;
-}
-
-.btn-back {
-  background: white;
-  border: 1px solid #e2e8f0;
-  color: #64748b;
-  padding: 0.75rem 1.5rem;
-  border-radius: 12px;
-  font-weight: 700;
-  font-size: 0.9rem;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin: 0 auto;
-  transition: all 0.2s;
-}
-
-.btn-back:hover {
-  background-color: #f1f5f9;
-  color: #0f172a;
-}
 
 .fade-in {
   animation: fadeIn 0.5s ease-out;
