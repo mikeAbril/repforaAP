@@ -4,6 +4,38 @@ import Report from "../models/Report.js";
 import { validatePlatformData } from "../validations/platform.validation.js";
 
 /**
+ * GET /api/instructors/lookup?documentType=CC&documentNumber=123456
+ * Busca un instructor por tipo y numero de documento.
+ * Usado por el frontend para autocompletar el formulario.
+ */
+export const lookupInstructor = async (req, res, next) => {
+    try {
+        const { documentType, documentNumber } = req.query;
+
+        if (!documentType || !documentNumber) {
+            return res.status(400).json({
+                success: false,
+                message: "documentType y documentNumber son obligatorios",
+            });
+        }
+
+        const instructor = await Instructor.findOne({ documentType, documentNumber }).select("-__v -createdAt -updatedAt");
+
+        if (!instructor) {
+            return res.json({ success: true, found: false });
+        }
+
+        res.json({
+            success: true,
+            found: true,
+            instructor,
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
  * POST /api/reports
  * Endpoint público: recibe datos del formulario del contratista,
  * busca o crea el Instructor, y crea un Report con status: pending.

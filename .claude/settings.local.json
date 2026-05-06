@@ -4,7 +4,8 @@
       "Bash(npx vite *)",
       "Bash(node scripts/createAdmin.js)",
       "Bash(xargs grep -l \"admin.*dashboard\\\\|dashboard.*admin\\\\|admin.*report\\\\|report.*admin\")",
-      "Bash(npm install *)"
+      "Bash(npm install *)",
+      "Bash(node -e \"import\\('./index.js'\\).then\\(\\(\\) => { setTimeout\\(\\(\\) => process.exit\\(0\\), 2000\\) }\\).catch\\(e => { console.error\\('IMPORT ERROR:', e.message\\); process.exit\\(1\\) }\\)\")"
     ]
   }
 }

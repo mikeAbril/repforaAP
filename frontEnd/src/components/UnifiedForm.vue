@@ -58,15 +58,16 @@
                     </template>
                   </q-select>
 
-                  <q-input 
+                  <q-input
                     v-else-if="field.type === 'input'"
-                    outlined 
-                    v-model="formData[field.name]" 
+                    outlined
+                    v-model="formData[field.name]"
                     :placeholder="field.mask ? undefined : 'Ingrese el valor...'"
                     color="primary"
                     dense
                     :type="field.isNumber ? 'tel' : 'text'"
                     :mask="field.mask"
+                    @blur="field.name === 'documentNumber' ? onDocumentNumberBlur() : null"
                     @keypress="field.isNumber && !field.mask ? (e) => { if (!/[0-9]/.test(e.key)) e.preventDefault(); } : null"
                     lazy-rules
                     :rules="[
@@ -127,6 +128,14 @@
         </q-form>
       </q-card-section>
 
+      <!-- Overlay de carga tras enviar solicitud -->
+      <div v-if="showSuccessOverlay" class="success-overlay">
+        <div class="success-overlay-content">
+          <q-spinner color="white" size="50px" />
+          <p class="success-overlay-text">Procesando solicitud...</p>
+        </div>
+      </div>
+
     </q-card>
   </q-page>
 </template>
@@ -150,6 +159,7 @@ const $q = useQuasar();
 const router = useRouter();
 const config = computed(() => formConfigs[props.platform]);
 const isSubmitting = ref(false);
+const showSuccessOverlay = ref(false);
 const formRef = ref(null);
 
 const goBack = () => {
@@ -178,8 +188,6 @@ import { getData } from '@/services/apiClient';
 const supervisorsList = ref([]);
 
 const getOptions = (options) => {
-
-
   if (options === 'meses') return mesesOptions;
   if (options === 'mesesNombres') return mesesNombresOptions;
   if (options === 'anios') return aniosOptions;
@@ -203,6 +211,49 @@ const fetchSupervisors = async () => {
 };
 
 fetchSupervisors();
+
+const SKIP_FIELDS_ALWAYS = ['mes', 'anio'];
+const SKIP_FIELDS_MI_PLANILLA = ['numeroPlanilla', 'valorPagado', 'fechaPagoDia', 'fechaPagoMes', 'fechaPagoAnio'];
+
+const onDocumentNumberBlur = async () => {
+  if (!formData.documentType || !formData.documentNumber) return;
+
+  try {
+    const data = await getData(`/reports/instructors/lookup?documentType=${formData.documentType}&documentNumber=${formData.documentNumber}`);
+
+    if (!data.success || !data.found) return;
+
+    const instructor = data.instructor;
+
+    if (instructor.documentIssueDate) {
+      const date = new Date(instructor.documentIssueDate);
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      instructor.documentIssueDate = `${year}-${month}-${day}`;
+    }
+
+    const skipFields = [...SKIP_FIELDS_ALWAYS];
+    if (props.platform === 'mi_planilla') {
+      skipFields.push(...SKIP_FIELDS_MI_PLANILLA);
+    }
+
+    Object.keys(instructor).forEach(key => {
+      if (key in formData && !skipFields.includes(key) && instructor[key] !== null && instructor[key] !== undefined) {
+        formData[key] = instructor[key];
+      }
+    });
+
+    $q.notify({
+      color: 'positive',
+      position: 'top',
+      message: 'Datos del instructor cargados correctamente',
+      icon: 'sym_o_check_circle'
+    });
+  } catch (error) {
+    console.error('Error buscando instructor:', error);
+  }
+};
 
 const filterFn = (val, update, fieldName, originalOptions) => {
   if (val === '') {
@@ -233,8 +284,6 @@ const onSubmit = async () => {
       email: formData.email,
       documentIssueDate: formData.documentIssueDate ? formData.documentIssueDate.replace(/\//g, '-') : null,
       eps: formData.eps || 'N/A',
-      email: formData.email,
-      documentIssueDate: formData.documentIssueDate ? formData.documentIssueDate.replace(/\//g, '-') : null,
       supervisorId: formData.supervisorId,
       reportMonth: formData.mes,
       reportYear: formData.anio,
@@ -244,32 +293,24 @@ const onSubmit = async () => {
       }
     };
 
-    // Limpiar duplicados en platformData para no enviar basura redundante al esquema Mixed
+    // Limpiar campos generales de platformData para no enviar basura redundante al esquema Mixed
     delete payload.platformData.documentType;
     delete payload.platformData.documentNumber;
     delete payload.platformData.fullName;
     delete payload.platformData.email;
     delete payload.platformData.documentIssueDate;
     delete payload.platformData.eps;
-    delete payload.platformData.email;
-    delete payload.platformData.documentIssueDate;
     delete payload.platformData.supervisorId;
 
     const finalPayload = JSON.stringify(payload, null, 2);
     console.log(`🚀 Enviando datos a /reports:`, payload);
     const response = await postData('/reports', payload);
-    
-    $q.notify({
-      color: 'positive',
-      position: 'top',
-      message: 'Solicitud enviada a la cola de procesamiento.',
-      icon: 'sym_o_check_circle'
-    });
 
-    // Esperar a que el usuario vea la notificación antes de recargar la página
+    showSuccessOverlay.value = true;
+
     setTimeout(() => {
       window.location.reload();
-    }, 2500);
+    }, 3000);
   } catch (error) {
     console.error('Error al enviar solicitud:', error);
     $q.notify({
@@ -412,6 +453,35 @@ const onSubmit = async () => {
   .page-container { padding: 0.5rem; }
   .unified-card-premium { border-radius: 0; border: none; }
   .form-section-container { padding: 0.75rem; border-radius: 12px; }
+}
+
+.success-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.success-overlay-content {
+  background: #39a900;
+  border-radius: 16px;
+  padding: 2rem 3rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.success-overlay-text {
+  color: white;
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0;
 }
 
 </style>

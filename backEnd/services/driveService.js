@@ -187,37 +187,6 @@ const formatFileName = (fullName, documentType, documentNumber) => {
  * @param {string} supervisorName - Nombre del supervisor
  * @returns {Promise<string>} ID de la carpeta "CERTIFICADOS DE PLANILLA"
  */
-export const setupSupervisorFolder = async (supervisorName) => {
-    const drive = getDriveClient();
-    const activeRootId = await validateAndGetRootId(drive);
-
-    // 1. Crear/Encontrar carpeta con el nombre del supervisor
-    console.log(`   📂 Preparando espacio para supervisor: ${supervisorName}`);
-    const supervisorRootId = await findOrCreateFolder(drive, supervisorName.toUpperCase(), activeRootId);
-
-    // 2. Buscar/Crear carpeta "CERTIFICADOS DE PLANILLA" dentro de la carpeta del supervisor
-    const shareableFolderName = "CERTIFICADOS DE PLANILLA";
-    console.log(`   📂 Preparando carpeta de certificados: "${shareableFolderName}"`);
-
-    const shareableFolderId = await findOrCreateFolder(drive, shareableFolderName, supervisorRootId);
-
-    return shareableFolderId;
-};
-
-/**
- * Función auxiliar para verificar si una carpeta todavía existe en Drive.
- */
-export const checkIfFolderExists = async (folderId) => {
-    try {
-        if (!folderId) return false;
-        const drive = getDriveClient();
-        await drive.files.get({ fileId: folderId, fields: "id", supportsAllDrives: true });
-        return true;
-    } catch (e) {
-        return false;
-    }
-};
-
 export const uploadToDrive = async (localFilePath, fullName, year, month, documentType, documentNumber, supervisorName = null) => {
     if (!fs.existsSync(localFilePath)) {
         throw new Error(`El archivo local no existe: ${localFilePath}`);

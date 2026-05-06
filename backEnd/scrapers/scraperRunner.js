@@ -12,7 +12,7 @@ import { scrapeAportesEnLinea } from "./aportesEnLineaScraper.js";
 import { scrapeAsopagos } from "./asopagosScraper.js";
 import { scrapeMiPlanilla } from "./miPlanillaScraper.js";
 
-import { uploadToDrive, setupSupervisorFolder, checkIfFolderExists } from "../services/driveService.js";
+import { uploadToDrive } from "../services/driveService.js";
 import { decrypt } from "../utils/crypto.js";
 
 let isRunnerRunning = false;
@@ -198,11 +198,11 @@ const processPendingReports = async (platform) => {
 };
 
 /**
- * Busca reportes que quedaron en 'processing' por más de 15 minutos
+ * Busca reportes que quedaron en 'processing' por más de 5 minutos
  * (probablemente por un crash del servidor) y los vuelve a 'pending'.
  */
 const recoverStuckReports = async () => {
-    const timeoutDate = new Date(Date.now() - 5 * 60 * 1000); // 5 minutos atrás
+    const timeoutDate = new Date(Date.now() - 5 * 60 * 1000);
 
     const stuckReports = await Report.find({
         status: "processing",
@@ -276,11 +276,10 @@ const runScraperCycle = async () => {
 };
 
 /**
- * Inicia el cron job para ejecutar el scraper diariamente a las 2:00 AM.
+ * Inicia el cron job para ejecutar el scraper diariamente.
  */
 export const startScraperCron = () => {
-    // Todos los días a las 2:00 AM
-    cron.schedule("19  20 * * *", async () => {
+    cron.schedule("34  19 * * *", async () => {
         try {
             await runScraperCycle();
         } catch (error) {
@@ -288,7 +287,7 @@ export const startScraperCron = () => {
         }
     });
 
-    console.log("🤖 Scraper cron iniciado — programado para las 2:00 AM diaria");
+    console.log("🤖 Scraper cron iniciado — programado para las 8:19 PM diaria");
 };
 
 /**

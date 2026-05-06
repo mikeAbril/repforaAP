@@ -102,6 +102,7 @@
                     dense
                     :type="field.isNumber ? 'tel' : 'text'"
                     :mask="field.mask"
+                    @blur="field.name === 'documentNumber' ? onDocumentNumberBlur() : null"
                     @keypress="field.isNumber && !field.mask ? (e) => { if (!/[0-9]/.test(e.key)) e.preventDefault(); } : null"
                     lazy-rules
                     :rules="[
@@ -159,6 +160,14 @@
 
       </q-form>
 
+      <!-- Overlay de carga tras enviar solicitud -->
+      <div v-if="showSuccessOverlay" class="success-overlay">
+        <div class="success-overlay-content">
+          <q-spinner color="white" size="50px" />
+          <p class="success-overlay-text">Procesando solicitud...</p>
+        </div>
+      </div>
+
     </div>
   </q-page>
 </template>
@@ -173,6 +182,7 @@ import { postData, getData } from '@/services/apiClient';
 const router = useRouter();
 const $q = useQuasar();
 const isSubmitting = ref(false);
+const showSuccessOverlay = ref(false);
 const formRef = ref(null);
 const selectedPlatform = ref(null);
 
@@ -257,6 +267,53 @@ const initFormData = (platformId) => {
   }
 };
 
+// Campos que nunca se autocompletan
+const SKIP_FIELDS_ALWAYS = ['mes', 'anio'];
+const SKIP_FIELDS_MI_PLANILLA = ['numeroPlanilla', 'valorPagado', 'fechaPagoDia', 'fechaPagoMes', 'fechaPagoAnio'];
+
+const onDocumentNumberBlur = async () => {
+  if (!formData.documentType || !formData.documentNumber) return;
+
+  try {
+    const data = await getData(`/reports/instructors/lookup?documentType=${formData.documentType}&documentNumber=${formData.documentNumber}`);
+
+    if (!data.success || !data.found) return;
+
+    const instructor = data.instructor;
+
+    // Formatear documentIssueDate a YYYY-MM-DD si existe
+    if (instructor.documentIssueDate) {
+      const date = new Date(instructor.documentIssueDate);
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      instructor.documentIssueDate = `${year}-${month}-${day}`;
+    }
+
+    // Campos que no se llenan para esta plataforma
+    const skipFields = [...SKIP_FIELDS_ALWAYS];
+    if (selectedPlatform.value === 'mi_planilla') {
+      skipFields.push(...SKIP_FIELDS_MI_PLANILLA);
+    }
+
+    // Llenar solo los campos que existan en el formData actual y no esten en skipFields
+    Object.keys(instructor).forEach(key => {
+      if (key in formData && !skipFields.includes(key) && instructor[key] !== null && instructor[key] !== undefined) {
+        formData[key] = instructor[key];
+      }
+    });
+
+    $q.notify({
+      color: 'positive',
+      position: 'top',
+      message: 'Datos del instructor cargados correctamente',
+      icon: 'sym_o_check_circle'
+    });
+  } catch (error) {
+    console.error('Error buscando instructor:', error);
+  }
+};
+
 const onPlatformChange = (platformId) => {
   initFormData(platformId);
 };
@@ -314,18 +371,12 @@ const onSubmit = async () => {
 
     console.log('Enviando datos a /reports:', payload);
     await postData('/reports', payload);
-    
-    $q.notify({
-      color: 'positive',
-      position: 'top',
-      message: 'Solicitud enviada a la cola de procesamiento.',
-      icon: 'sym_o_check_circle'
-    });
 
-    // Esperar a que el usuario vea la notificación antes de recargar la página
+    showSuccessOverlay.value = true;
+
     setTimeout(() => {
       window.location.reload();
-    }, 2500);
+    }, 3000);
   } catch (error) {
     console.error('Error al enviar solicitud:', error);
     $q.notify({
@@ -443,5 +494,34 @@ const onSubmit = async () => {
   .page-container { padding: 1rem; }
   .hero-title { font-size: 1.5rem; }
   .form-section-container { padding: 0.75rem; }
+}
+
+.success-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.success-overlay-content {
+  background: var(--color_button);
+  border-radius: 16px;
+  padding: 2rem 3rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.success-overlay-text {
+  color: white;
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0;
 }
 </style>
