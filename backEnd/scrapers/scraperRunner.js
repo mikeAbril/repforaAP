@@ -14,6 +14,9 @@ import { scrapeMiPlanilla } from "./miPlanillaScraper.js";
 
 import { uploadToDrive } from "../services/driveService.js";
 import { decrypt } from "../utils/crypto.js";
+import { sendEmail } from "../utils/nodemailer.js";
+
+const platformLabels = { soi: 'SOI', asopagos: 'ASOPAGOS', mi_planilla: 'COMPENSAR (Mi Planilla)', aportes_en_linea: 'APORTES EN LÍNEA' };
 
 let isRunnerRunning = false;
 
@@ -111,10 +114,12 @@ const processPendingReports = async (platform) => {
             // Obtener el supervisor para su API Key de 2Captcha
             let decryptedApiKey = null;
             let supervisorName = null;
+            let supervisorEmail = null;
             if (current.supervisorId) {
                 const supervisor = await Supervisor.findById(current.supervisorId);
                 if (supervisor) {
                     supervisorName = supervisor.name;
+                    supervisorEmail = supervisor.email;
                     if (supervisor.apiKey) {
                         decryptedApiKey = decrypt(supervisor.apiKey);
                     }
@@ -164,11 +169,54 @@ const processPendingReports = async (platform) => {
                     current.status = "downloaded";
                     console.log(`☁️  Reporte ${current._id} — subido a Drive`);
 
+                    // Correo #2: Notificar al instructor que su certificado está listo
+                    if (instructor.email && driveResult.driveUrl) {
+                        const driveLink = driveResult.driveUrl.split("&")[0];
+                        sendEmail(
+                            instructor.email,
+                            `Certificado listo - ${platformLabels[platform] || platform}`,
+                            `
+                                <p style="font-size: 16px;">Hola, <strong>${instructor.fullName}</strong></p>
+                                <p>Su certificado de seguridad social ha sido generado exitosamente y ya está disponible para descarga.</p>
+                                <div style="background-color: #f0fdf4; border-left: 4px solid #318335; padding: 16px 20px; margin: 20px 0; border-radius: 0 8px 8px 0;">
+                                    <p style="margin: 0;"><strong>Plataforma:</strong> ${platformLabels[platform] || platform}</p>
+                                    <p style="margin: 0;"><strong>Periodo:</strong> ${current.reportMonth}/${current.reportYear}</p>
+                                </div>
+                                <p>Puede descargar su certificado haciendo clic en el siguiente enlace:</p>
+                                <p><a href="${driveLink}" style="background-color: #318335; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: 600; display: inline-block;">Descargar Certificado</a></p>
+                            `
+                        ).catch(() => { });
+                    }
+
                     fs.unlinkSync(result.filePath);
                 } catch (driveError) {
                     console.error(`⚠️  Drive falló para ${current._id}: ${driveError.message}`);
                 }
             } else {
+                // Correo #4: Alertar al supervisor si el error es de API Key
+                if (supervisorEmail && (/(api key|2captcha|captcha)/i.test(result.error || ''))) {
+                    sendEmail(
+                        supervisorEmail,
+                        'Alerta: Problema con la API Key de 2Captcha',
+                        `
+                            <p style="font-size: 16px;">Hola, <strong>${supervisorName}</strong></p>
+                            <p>Se detectó un problema con su <strong>API Key de 2Captcha</strong> durante el procesamiento automático de certificados.</p>
+                            <div style="background-color: #fef2f2; border-left: 4px solid #dc2626; padding: 16px 20px; margin: 20px 0; border-radius: 0 8px 8px 0;">
+                                <p style="margin: 0; color: #991b1b;"><strong>Error:</strong> ${result.error}</p>
+                                <p style="margin: 0; color: #991b1b;"><strong>Instructor:</strong> ${instructor.fullName}</p>
+                                <p style="margin: 0; color: #991b1b;"><strong>Plataforma:</strong> ${platformLabels[platform] || platform}</p>
+                            </div>
+                            <p>Posibles causas:</p>
+                            <ul>
+                                <li>Saldo insuficiente en su cuenta de 2Captcha</li>
+                                <li>La API Key es incorrecta o expiró</li>
+                                <li>Problemas temporales con el servicio de 2Captcha</li>
+                            </ul>
+                            <p>Por favor revise su API Key o actualícela directamente desde la plataforma.</p>
+                        `
+                    ).catch(() => { });
+                }
+
                 if (current.attempts < 3) {
                     current.status = "pending";
                     current.errorReason = `Reintento ${current.attempts}/3: ${result.error}`;
@@ -243,6 +291,8 @@ const runScraperCycle = async () => {
 
     isRunnerRunning = true;
 
+    const cycleStartTime = new Date();
+
     try {
         console.log(`\n⏰ [${new Date().toLocaleTimeString()}] Iniciando ciclo de scraping...`);
 
@@ -270,6 +320,43 @@ const runScraperCycle = async () => {
         }
 
         console.log(`✔️  Ciclo completado.\n`);
+
+        // 4. Correo #3: Enviar resumen del ciclo a los supervisores con reportes procesados
+        const processedReports = await Report.find({
+            updatedAt: { $gte: cycleStartTime },
+            status: { $in: ["downloaded", "error"] }
+        });
+
+        if (processedReports.length > 0) {
+            const supervisorIds = [...new Set(processedReports.map(r => r.supervisorId).filter(Boolean))];
+            const downloaded = processedReports.filter(r => r.status === "downloaded").length;
+            const errored = processedReports.filter(r => r.status === "error").length;
+
+            for (const supId of supervisorIds) {
+                const supervisor = await Supervisor.findById(supId);
+                if (!supervisor || !supervisor.email) continue;
+
+                const supReports = processedReports.filter(r => String(r.supervisorId) === String(supId));
+                const supDownloaded = supReports.filter(r => r.status === "downloaded").length;
+                const supErrored = supReports.filter(r => r.status === "error").length;
+
+                sendEmail(
+                    supervisor.email,
+                    `Resumen del ciclo de scraping automático`,
+                    `
+                        <p style="font-size: 16px;">Hola, <strong>${supervisor.name}</strong></p>
+                        <p>El ciclo de scraping automático ha finalizado. A continuación el resumen de los reportes asociados a usted:</p>
+                        <div style="background-color: #f0fdf4; border-left: 4px solid #318335; padding: 16px 20px; margin: 20px 0; border-radius: 0 8px 8px 0;">
+                            <p style="margin: 0; font-size: 18px;"><strong>${supReports.length}</strong> reporte(s) procesado(s)</p>
+                            <p style="margin: 8px 0 0; color: #318335;">✅ Completados: <strong>${supDownloaded}</strong></p>
+                            <p style="margin: 4px 0 0; color: #dc2626;">❌ Con error: <strong>${supErrored}</strong></p>
+                        </div>
+                        ${supErrored > 0 ? '<p style="color: #6b7280; font-size: 14px;">Los reportes con error fueron reiniciados para un nuevo intento en el próximo ciclo. Puede revisarlos desde la plataforma.</p>' : ''}
+                        <p style="color: #6b7280; font-size: 14px;">Resumen global del ciclo: ${downloaded} completados, ${errored} con error.</p>
+                    `
+                ).catch(() => { });
+            }
+        }
     } finally {
         isRunnerRunning = false;
     }
@@ -279,7 +366,7 @@ const runScraperCycle = async () => {
  * Inicia el cron job para ejecutar el scraper diariamente.
  */
 export const startScraperCron = () => {
-    cron.schedule("34  19 * * *", async () => {
+    cron.schedule("09  21 * * *", async () => {
         try {
             await runScraperCycle();
         } catch (error) {
