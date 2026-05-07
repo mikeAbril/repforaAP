@@ -745,11 +745,18 @@ const onRequest = (props) => {
   loadReports(props.pagination.page)
 }
 
-onMounted(() => {
-  loadStats()
-  loadReports(1)
-  fetchProfile()
+onMounted(async () => {
+  // Intentar cargar datos. Si falla (backend reconectando a MongoDB),
+  // reintentar automáticamente después de 2 segundos.
+  try {
+    await Promise.all([loadStats(), loadReports(1), fetchProfile()])
+  } catch {
+    setTimeout(async () => {
+      await Promise.all([loadStats(), loadReports(1), fetchProfile()])
+    }, 2000)
+  }
 })
+
 </script>
 
 <style scoped>
