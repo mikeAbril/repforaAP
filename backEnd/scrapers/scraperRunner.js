@@ -374,7 +374,7 @@ export const startScraperCron = () => {
         }
     });
 
-    console.log("🤖 Scraper cron iniciado — programado para las 8:19 PM diaria");
+    console.log("🤖 Scraper cron iniciado — programado para las 2 AM diaria");
 };
 
 /**
