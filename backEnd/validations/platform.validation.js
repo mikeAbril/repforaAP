@@ -9,7 +9,7 @@ const PLATFORM_FIELDS = {
     },
     aportes_en_linea: {
         label: "Aportes en Línea",
-        required: ["anio", "mes", "fechaExpedicion"],
+        required: ["anio", "mes"],
     },
     asopagos: {
         label: "Asopagos",
@@ -62,5 +62,3 @@ export const validatePlatformData = (platform, platformData) => {
 
     return { valid: true };
 };
-
-export default PLATFORM_FIELDS;

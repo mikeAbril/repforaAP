@@ -20,7 +20,11 @@ export const authMiddleware = (req, res, next) => {
 
     try {
         const decoded = verifyToken(token);
-        req.supervisor = { id: decoded.id, documentNumber: decoded.documentNumber };
+        req.supervisor = { 
+            id: decoded.id, 
+            documentNumber: decoded.documentNumber,
+            role: decoded.role || "supervisor"
+        };
         next();
     } catch (error) {
         return res.status(401).json({
@@ -28,4 +32,20 @@ export const authMiddleware = (req, res, next) => {
             message: "Token inválido o expirado.",
         });
     }
+};
+
+/**
+ * Middleware para autorizar por roles.
+ * @param {string[]} roles - Lista de roles permitidos.
+ */
+export const roleMiddleware = (roles) => {
+    return (req, res, next) => {
+        if (!req.supervisor || !roles.includes(req.supervisor.role)) {
+            return res.status(403).json({
+                success: false,
+                message: "No tienes permisos para realizar esta acción.",
+            });
+        }
+        next();
+    };
 };

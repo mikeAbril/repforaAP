@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx vite *)",
+      "Bash(node scripts/createAdmin.js)",
+      "Bash(xargs grep -l \"admin.*dashboard\\\\|dashboard.*admin\\\\|admin.*report\\\\|report.*admin\")",
+      "Bash(npm install *)",
+      "Bash(node -e \"import\\('./index.js'\\).then\\(\\(\\) => { setTimeout\\(\\(\\) => process.exit\\(0\\), 2000\\) }\\).catch\\(e => { console.error\\('IMPORT ERROR:', e.message\\); process.exit\\(1\\) }\\)\")",
+      "Bash(curl -s http://localhost:3000/api/instructor)",
+      "Bash(curl -s -X POST http://localhost:3000/api/auth/login -H \"Content-Type: application/json\" -d '{\"documentType\":\"CC\",\"documentNumber\":\"test\",\"password\":\"test\"}')",
+      "Bash(curl -s https://miplanilla.devscenter.online/api/auth/login -X POST -H \"Content-Type: application/json\" -d '{\"documentType\":\"CC\",\"documentNumber\":\"test\",\"password\":\"test\"}')",
+      "Bash(curl -s https://miplanilla.devscenter.online)",
+      "Bash(curl -s https://miplanilla.devscenter.online/assets/index-C3sdAhrX.js)",
+      "Bash(curl *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)"
+    ]
+  }
+}

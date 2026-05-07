@@ -5,22 +5,22 @@
       <!-- Card Header -->
       <q-card-section class="header-section">
         <div class="row items-center no-wrap">
-          <q-btn flat round dense icon="arrow_back" color="grey-7" class="q-mr-md" @click="goBack" />
+          <q-btn flat round dense icon="sym_o_arrow_back" color="grey-7" class="q-mr-md" @click="goBack" />
           <div class="header-content">
             <h1 class="form-title">Solicitud de Certificado</h1>
             <p class="form-subtitle text-uppercase">{{ config.title }}</p>
           </div>
           <q-space />
-          <q-btn flat round dense icon="close" color="grey-4" @click="goBack" />
+          <q-btn flat round dense icon="sym_o_close" color="grey-4" @click="goBack" />
         </div>
       </q-card-section>
 
       <q-card-section class="q-pa-md">
-        <q-form @submit="onSubmit" class="q-gutter-y-md">
+        <q-form ref="formRef" @submit="onSubmit" class="q-gutter-y-md">
           
           <div v-for="(section, sIdx) in config.sections" :key="sIdx" class="form-section-container">
             <div class="section-header q-mb-sm">
-              <q-icon :name="section.icon" color="primary" size="xs" class="q-mr-sm" />
+              <q-icon :name="section.icon" color="primary" size="18px" class="q-mr-sm" />
               <span class="section-label">{{ section.title }}</span>
             </div>
             
@@ -58,25 +58,50 @@
                     </template>
                   </q-select>
 
-                  <q-input 
+                  <q-input
                     v-else-if="field.type === 'input'"
-                    outlined 
-                    v-model="formData[field.name]" 
+                    outlined
+                    v-model="formData[field.name]"
                     :placeholder="field.mask ? undefined : 'Ingrese el valor...'"
                     color="primary"
                     dense
                     :type="field.isNumber ? 'tel' : 'text'"
                     :mask="field.mask"
+                    @blur="field.name === 'documentNumber' ? onDocumentNumberBlur() : null"
                     @keypress="field.isNumber && !field.mask ? (e) => { if (!/[0-9]/.test(e.key)) e.preventDefault(); } : null"
                     lazy-rules
                     :rules="[
                       val => (val !== null && val !== undefined && val !== '') || 'Este campo es obligatorio',
                       val => !field.isNumber || field.mask || /^\d+$/.test(val) || 'Solo se permiten números'
                     ]"
+                    />
+
+                  <q-input 
+                    v-else-if="field.type === 'date'"
+                    outlined 
+                    v-model="formData[field.name]" 
+                    :placeholder="field.mask ? undefined : 'Ingrese el valor...'"
+                    color="primary"
+                    dense
+                    readonly
+                    lazy-rules
+                    :rules="[
+                      val => (val !== null && val !== undefined && val !== '') || 'Este campo es obligatorio'
+                    ]"
                     class="premium-input"
-                  />
-
-
+                  >
+                    <template v-slot:append>
+                      <q-icon name="sym_o_event" class="cursor-pointer">
+                        <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                          <q-date v-model="formData[field.name]" mask="YYYY-MM-DD">
+                            <div class="row items-center justify-end">
+                              <q-btn v-close-popup label="Cerrar" color="primary" flat />
+                            </div>
+                          </q-date>
+                        </q-popup-proxy>
+                      </q-icon>
+                    </template>
+                  </q-input>
                 </div>
                 
               </div>
@@ -93,6 +118,7 @@
               :loading="isSubmitting"
             >
               <div class="row items-center no-wrap">
+                <q-icon name="sym_o_cloud_upload" class="q-mr-md" />
                 <span class="q-mr-md">Enviar Solicitud</span>
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polyline points="22 2 15 22 11 13 2 9 22 2"/></svg>
               </div>
@@ -101,6 +127,14 @@
 
         </q-form>
       </q-card-section>
+
+      <!-- Overlay de carga tras enviar solicitud -->
+      <div v-if="showSuccessOverlay" class="success-overlay">
+        <div class="success-overlay-content">
+          <q-spinner color="white" size="50px" />
+          <p class="success-overlay-text">Procesando solicitud...</p>
+        </div>
+      </div>
 
     </q-card>
   </q-page>
@@ -125,9 +159,11 @@ const $q = useQuasar();
 const router = useRouter();
 const config = computed(() => formConfigs[props.platform]);
 const isSubmitting = ref(false);
+const showSuccessOverlay = ref(false);
+const formRef = ref(null);
 
 const goBack = () => {
-  router.push('/');
+  router.push('/instructor');
 };
 
 const formData = reactive({});
@@ -152,8 +188,6 @@ import { getData } from '@/services/apiClient';
 const supervisorsList = ref([]);
 
 const getOptions = (options) => {
-
-
   if (options === 'meses') return mesesOptions;
   if (options === 'mesesNombres') return mesesNombresOptions;
   if (options === 'anios') return aniosOptions;
@@ -177,6 +211,49 @@ const fetchSupervisors = async () => {
 };
 
 fetchSupervisors();
+
+const SKIP_FIELDS_ALWAYS = ['mes', 'anio'];
+const SKIP_FIELDS_MI_PLANILLA = ['numeroPlanilla', 'valorPagado', 'fechaPagoDia', 'fechaPagoMes', 'fechaPagoAnio'];
+
+const onDocumentNumberBlur = async () => {
+  if (!formData.documentType || !formData.documentNumber) return;
+
+  try {
+    const data = await getData(`/reports/instructors/lookup?documentType=${formData.documentType}&documentNumber=${formData.documentNumber}`);
+
+    if (!data.success || !data.found) return;
+
+    const instructor = data.instructor;
+
+    if (instructor.documentIssueDate) {
+      const date = new Date(instructor.documentIssueDate);
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      instructor.documentIssueDate = `${year}-${month}-${day}`;
+    }
+
+    const skipFields = [...SKIP_FIELDS_ALWAYS];
+    if (props.platform === 'mi_planilla') {
+      skipFields.push(...SKIP_FIELDS_MI_PLANILLA);
+    }
+
+    Object.keys(instructor).forEach(key => {
+      if (key in formData && !skipFields.includes(key) && instructor[key] !== null && instructor[key] !== undefined) {
+        formData[key] = instructor[key];
+      }
+    });
+
+    $q.notify({
+      color: 'positive',
+      position: 'top',
+      message: 'Datos del instructor cargados correctamente',
+      icon: 'sym_o_check_circle'
+    });
+  } catch (error) {
+    console.error('Error buscando instructor:', error);
+  }
+};
 
 const filterFn = (val, update, fieldName, originalOptions) => {
   if (val === '') {
@@ -204,6 +281,8 @@ const onSubmit = async () => {
       documentType: formData.documentType,
       documentNumber: formData.documentNumber,
       fullName: formData.fullName,
+      email: formData.email,
+      documentIssueDate: formData.documentIssueDate ? formData.documentIssueDate.replace(/\//g, '-') : null,
       eps: formData.eps || 'N/A',
       supervisorId: formData.supervisorId,
       reportMonth: formData.mes,
@@ -214,41 +293,31 @@ const onSubmit = async () => {
       }
     };
 
-    // Limpiar duplicados en platformData
+    // Limpiar campos generales de platformData para no enviar basura redundante al esquema Mixed
     delete payload.platformData.documentType;
     delete payload.platformData.documentNumber;
     delete payload.platformData.fullName;
+    delete payload.platformData.email;
+    delete payload.platformData.documentIssueDate;
     delete payload.platformData.eps;
     delete payload.platformData.supervisorId;
-    delete payload.platformData.reportMonth;
-    delete payload.platformData.reportYear;
 
     const finalPayload = JSON.stringify(payload, null, 2);
     console.log(`🚀 Enviando datos a /reports:`, payload);
     const response = await postData('/reports', payload);
-    
-    // Resetear el formulario tras éxito
-    if (config.value) {
-      config.value.sections.forEach(section => {
-        section.fields.forEach(field => {
-          formData[field.name] = null;
-        });
-      });
-    }
-    
-    $q.notify({
-      color: 'positive',
-      position: 'top',
-      message: 'Solicitud enviada a la cola de procesamiento.',
-      icon: 'check_circle'
-    });
+
+    showSuccessOverlay.value = true;
+
+    setTimeout(() => {
+      window.location.reload();
+    }, 3000);
   } catch (error) {
     console.error('Error al enviar solicitud:', error);
     $q.notify({
       color: 'negative',
       position: 'top',
       message: 'Error al enviar la solicitud',
-      icon: 'report_problem'
+      icon: 'sym_o_warning'
     });
   } finally {
     isSubmitting.value = false;
@@ -384,6 +453,35 @@ const onSubmit = async () => {
   .page-container { padding: 0.5rem; }
   .unified-card-premium { border-radius: 0; border: none; }
   .form-section-container { padding: 0.75rem; border-radius: 12px; }
+}
+
+.success-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.success-overlay-content {
+  background: #39a900;
+  border-radius: 16px;
+  padding: 2rem 3rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.success-overlay-text {
+  color: white;
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0;
 }
 
 </style>

@@ -1,8 +1,12 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import MainLayout from '@/layouts/MainLayout.vue'
-import CardTest from '@/views/CardTest.vue'
+import InstructorView from '@/views/InstructorView.vue'
 import LoginView from '@/views/LoginView.vue'
 import SupervisorView from '@/views/SupervisorView.vue'
+import AdminSupervisorsView from '@/views/AdminSupervisorsView.vue'
+import ChangePasswordView from '@/views/ChangePasswordView.vue'
+import HomeView from '@/views/HomeView.vue'
+import UnifiedForm from '@/components/UnifiedForm.vue'
 
 const routes = [
     {
@@ -15,11 +19,30 @@ const routes = [
         path: '/',
         component: MainLayout,
         children: [
-            { path: '', name: 'Home', component: CardTest },
+            { path: '', name: 'Home', component: HomeView },
+            { path: 'instructor', name: 'Instructor', component: InstructorView },
+            {
+                path: 'form/:platform',
+                name: 'UnifiedForm',
+                component: UnifiedForm,
+                props: true
+            },
+            {
+                path: 'change-password',
+                name: 'ChangePassword',
+                component: ChangePasswordView,
+                meta: { requiresAuth: true }
+            },
             {
                 path: 'supervisor',
                 name: 'Supervisor',
                 component: SupervisorView,
+                meta: { requiresAuth: true }
+            },
+            {
+                path: 'admin/supervisors',
+                name: 'AdminSupervisors',
+                component: AdminSupervisorsView,
                 meta: { requiresAuth: true }
             }
         ]
@@ -31,18 +54,39 @@ const router = createRouter({
     routes
 })
 
+// Function to decode JWT (simple version for the guard)
+const parseJwt = (token) => {
+    try {
+        return JSON.parse(atob(token.split('.')[1]));
+    } catch (e) {
+        return null;
+    }
+};
+
 // Authentication Guard
 router.beforeEach((to, from) => {
-    const isAuthenticated = !!localStorage.getItem('auth_token');
+    const token = localStorage.getItem('auth_token');
+    const isAuthenticated = !!token;
+    let mustChange = false;
+
+    if (isAuthenticated) {
+        const decoded = parseJwt(token);
+        mustChange = decoded?.mustChangePassword || false;
+    }
 
     if (to.meta.requiresAuth && !isAuthenticated) {
-        // Redirigir al login si no está autenticado intentando entrar a zona segura
         return { name: 'Login' };
-    } else if (to.meta.guestOnly && isAuthenticated) {
-        // Evitar que usuarios logueados vean la página de login
+    }
+
+    // Si debe cambiar contraseña y no está en la página de cambio de clave, forzar redirección
+    if (isAuthenticated && mustChange && to.name !== 'ChangePassword') {
+        return { name: 'ChangePassword' };
+    }
+
+    // Evitar que usuarios logueados vean la página de login
+    if (to.meta.guestOnly && isAuthenticated) {
         return { name: 'Supervisor' };
     }
-    // Proceder normalmente (sin retorno o retornando undefined/true)
 });
 
 export default router

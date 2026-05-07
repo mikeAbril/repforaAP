@@ -24,6 +24,11 @@ const reportSchema = new Schema(
             type: Schema.Types.Mixed,
             required: [true, "Los datos de la plataforma son obligatorios"],
         },
+        eps: {
+            type: String,
+            required: [true, "La EPS es obligatoria"],
+            trim: true,
+        },
         reportMonth: {
             type: Number,
             required: [true, "El mes del reporte es obligatorio"],

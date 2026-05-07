@@ -18,9 +18,9 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // --- Middlewares globales ---
-const allowedOrigins = process.env.FRONTEND_URL 
-  ? process.env.FRONTEND_URL.split(",") 
-  : ["http://localhost:5173", "http://localhost:5174"];
+const allowedOrigins = process.env.FRONTEND_URL
+  ? process.env.FRONTEND_URL.split(",")
+  : ["http://localhost:5173", "http://localhost:5174", "https://miplanilla.devscenter.online/", "https://miplanilla.devscenter.online/api"];
 
 app.use(
   cors({

@@ -21,9 +21,9 @@ export const login = async (req, res, next) => {
         const { documentType, documentNumber, password } = req.body;
 
         // Buscar supervisor por tipo y número de documento
-        const supervisor = await Supervisor.findOne({ 
-            documentType, 
-            documentNumber: documentNumber.trim() 
+        const supervisor = await Supervisor.findOne({
+            documentType,
+            documentNumber: documentNumber.trim()
         });
         if (!supervisor) {
             return res.status(401).json({
@@ -42,7 +42,12 @@ export const login = async (req, res, next) => {
         }
 
         // Generar token
-        const token = generateToken({ id: supervisor._id, documentNumber: supervisor.documentNumber });
+        const token = generateToken({
+            id: supervisor._id,
+            documentNumber: supervisor.documentNumber,
+            role: supervisor.role,
+            mustChangePassword: supervisor.mustChangePassword
+        });
 
         res.json({
             success: true,
@@ -53,8 +58,53 @@ export const login = async (req, res, next) => {
                 documentNumber: supervisor.documentNumber,
                 name: supervisor.name,
                 email: supervisor.email,
-                apiKey: supervisor.apiKey
+                role: supervisor.role,
+                apiKey: supervisor.apiKey,
+                mustChangePassword: supervisor.mustChangePassword,
+                isConfigured: supervisor.isConfigured
             },
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * POST /api/auth/change-password
+ * Permite cambiar la contraseña obligatoria en el primer ingreso.
+ */
+export const changePassword = async (req, res, next) => {
+    try {
+        const { newPassword } = req.body;
+        const supervisorId = req.supervisor.id;
+
+        if (!newPassword || newPassword.length < 6) {
+            return res.status(400).json({
+                success: false,
+                message: "La nueva contraseña debe tener al menos 6 caracteres."
+            });
+        }
+
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+        await Supervisor.findByIdAndUpdate(supervisorId, {
+            password: hashedPassword,
+            mustChangePassword: false
+        });
+
+        // Generar un nuevo token que refleje que ya no debe cambiar la contraseña
+        const updatedSupervisor = await Supervisor.findById(supervisorId);
+        const token = generateToken({ 
+            id: updatedSupervisor._id, 
+            documentNumber: updatedSupervisor.documentNumber,
+            role: updatedSupervisor.role,
+            mustChangePassword: false
+        });
+
+        res.json({
+            success: true,
+            message: "Contraseña actualizada exitosamente.",
+            token
         });
     } catch (error) {
         next(error);

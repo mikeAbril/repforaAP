@@ -7,8 +7,6 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-// const solver = new Solver(process.env.TWOCAPTCHA_API_KEY); // Movido adentro
-
 const APORTES_FORM_URL = "https://empresas.aportesenlinea.com/Autoservicio/CertificadoAportes.aspx";
 const SITE_KEY = "6Lc6FDMUAAAAAKwQX0_xF92Z1MiUXm4sYbQ6bh6J";
 
@@ -163,75 +161,90 @@ export const scrapeAportesEnLinea = async (report, downloadDir) => {
                 await randomDelay(1000, 2000);
 
                 // 4. Submit
-                console.log("   🚀 Enviando formulario...");
-                // Aportes en Línea uses an asp:LinkButton which executes __doPostBack
-                // The native ASP __doPostBack has 'arguments.caller' which fails under Playwright's strict mode page.evaluate.
-                // We physically click the button instead.
-                // En lugar de `download`, Aportes en Línea abre una nueva pestaña (popup) con el visor de PDF
-                const popupPromise = page.waitForEvent('popup', { timeout: 30000 }).catch(() => null);
+                console.log("   🚀 Enviando formulario e interceptando descarga...");
+                
+                let pdfBuffer = null;
+                const responseListener = async (response) => {
+                    try {
+                        const contentType = response.headers()['content-type'];
+                        if (contentType && contentType.includes('application/pdf')) {
+                            const buffer = await response.body();
+                            if (buffer && buffer.length > 1000) {
+                                pdfBuffer = buffer;
+                            }
+                        }
+                    } catch (e) {
+                        // Ignorar errores al leer el body de respuestas incompletas
+                    }
+                };
+                context.on('response', responseListener);
+
+                // También monitoreamos descargas nativas por si acaso
+                const downloadPromise = page.waitForEvent('download', { timeout: 20000 }).catch(() => null);
 
                 await page.click("a#contenido_btnCalcular");
 
-                console.log("   🪟 Esperando pestaña emergente con el PDF...");
-                const popup = await popupPromise;
+                console.log("   🪟 Esperando respuesta o popup con el PDF...");
+                
+                // Esperar a que caiga el PDF en buffer, o haya una descarga nativa
+                let waitTime = 0;
+                let download = null;
+                while (!pdfBuffer && !download && waitTime < 25000) {
+                    await new Promise(r => setTimeout(r, 500));
+                    waitTime += 500;
+                    if (!download) {
+                        // Verifica si downloadPromise resolvió
+                        Promise.race([downloadPromise, Promise.resolve(null)]).then(d => { if(d) download = d; });
+                    }
+                }
 
-                if (popup) {
-                    // Esperamos a que la nueva pestaña termine de cargar el PDF
-                    await popup.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => null);
-                    
-                    const pdfUrl = popup.url();
-                    console.log(`   📄 PDF abierto en URL: ${pdfUrl}`);
-                    
-                    const safeName = (fullName || "SIN_NOMBRE").replace(/\s+/g, "_").toUpperCase();
-                    const fileName = `APORTES_${safeName}_${startAnio}_${startMes.toString().padStart(2, '0')}.pdf`;
-                    const filePath = path.join(downloadDir, fileName);
+                context.off('response', responseListener);
 
+                const safeName = (fullName || "SIN_NOMBRE").replace(/\s+/g, "_").toUpperCase();
+                const fileName = `APORTES_${safeName}_${startAnio}_${startMes.toString().padStart(2, '0')}.pdf`;
+                const filePath = path.join(downloadDir, fileName);
+
+                if (download) {
                     if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-
-                    // Descargar el contenido PDF de la nueva pestaña.
-                    // Playwright no expone un método simple para "guardar como" una pestaña de PDF nativa.
-                    // Pero podemos capturar la respuesta original o guardar el pdf impreso.
-                    // La forma más confiable si es una URL es descargarla directamente. Si requiere sesión, Playwright context provee cookies.
-                    const response = await popup.request.get(pdfUrl);
-                    const buffer = await response.body();
-                    fs.writeFileSync(filePath, buffer);
-                    
-                    console.log(`   ✅ Certificado PDF guardado exitosamente en: ${filePath}`);
-                    
-                    await popup.close();
+                    await download.saveAs(filePath);
+                    console.log(`   ✅ Certificado PDF guardado exitosamente (vía evento download) en: ${filePath}`);
                     await browser.close();
                     return { success: true, filePath };
-                } else {
-                    console.log("   ❌ No se abrió la pestaña del PDF, verificando posibles errores en la página...");
-                    
-                    // Look for ASP.NET error alerts or summary labels
-                    const errorMsg = await page.evaluate(() => {
-                        const summary = document.getElementById("contenido_ValidationSummary1");
-                        if (summary && summary.style.display !== 'none' && summary.innerText.trim().length > 0) {
-                            return summary.innerText.trim();
-                        }
-                        return null;
-                    });
-
-                    if (errorMsg) {
-                        console.log(`   ⚠️ Error de la plataforma: ${errorMsg}`);
-                        if (errorMsg.toLowerCase().includes("captcha")) {
-                            // If captcha failed somehow
-                             if(solverResult.id) await solver.badReport(solverResult.id);
-                             await page.goto(APORTES_FORM_URL, { waitUntil: "networkidle" });
-                             continue;
-                        } else {
-                             // Non-captcha error (e.g., No results)
-                             await browser.close();
-                             return { success: false, error: errorMsg };
-                        }
-                    }
-
-                    // No error found but no download either. Retry
-                    console.log("   ⚠️ Fallo silencioso, reintentando...");
-                    await page.goto(APORTES_FORM_URL, { waitUntil: "networkidle" });
-                    continue;
                 }
+
+                if (pdfBuffer) {
+                    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+                    fs.writeFileSync(filePath, pdfBuffer);
+                    console.log(`   ✅ Certificado PDF guardado exitosamente (interceptado) en: ${filePath}`);
+                    await browser.close();
+                    return { success: true, filePath };
+                }
+
+                // Si no hay PDF, revisar errores
+                console.log("   ❌ No se obtuvo el PDF, verificando posibles errores en la página...");
+                const errorMsg = await page.evaluate(() => {
+                    const summary = document.getElementById("contenido_ValidationSummary1");
+                    if (summary && summary.style.display !== 'none' && summary.innerText.trim().length > 0) {
+                        return summary.innerText.trim();
+                    }
+                    return null;
+                });
+
+                if (errorMsg) {
+                    console.log(`   ⚠️ Error de la plataforma: ${errorMsg}`);
+                    if (errorMsg.toLowerCase().includes("captcha") || errorMsg.toLowerCase().includes("seguridad")) {
+                         if(solverResult.id) await solver.badReport(solverResult.id);
+                         await page.goto(APORTES_FORM_URL, { waitUntil: "networkidle" }).catch(()=>{});
+                         continue;
+                    } else {
+                         await browser.close();
+                         return { success: false, error: errorMsg };
+                    }
+                }
+
+                console.log("   ⚠️ Fallo silencioso, no hubo PDF ni error, reintentando...");
+                await page.goto(APORTES_FORM_URL, { waitUntil: "networkidle" }).catch(()=>{});
+                continue;
 
             } catch (innerError) {
                 console.log(`   ⚠️ Error en intento ${attempt}: ${innerError.message}`);
