@@ -13,7 +13,8 @@
       "Bash(curl -s https://miplanilla.devscenter.online/assets/index-C3sdAhrX.js)",
       "Bash(curl *)",
       "Bash(git add *)",
-      "Bash(git commit *)"
+      "Bash(git commit *)",
+      "Bash(git push *)"
     ]
   }
 }
