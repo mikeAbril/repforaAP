@@ -70,65 +70,56 @@
 
       <!-- Analytics Section -->
       <div class="analytics-grid q-mb-xl">
+        <!-- Total Solicitudes -->
         <div class="stat-card-premium primary">
           <div class="stat-icon-box">
             <q-icon name="sym_o_description" size="24px" />
           </div>
           <div class="stat-content">
             <span class="stat-label">Total Solicitudes</span>
-            <h2 class="stat-value text-primary">{{ stats.total }}</h2>
+            <h2 class="stat-value text-primary">{{ filteredTotal }}</h2>
           </div>
         </div>
-      </div>
 
-      <!-- Scraper Configuration Section -->
-      <div class="config-section-premium q-mb-xl">
-        <div class="config-card">
-          <div class="row items-center q-gutter-x-md no-wrap">
-            <div class="config-icon-box">
-              <q-icon name="sym_o_key" size="24px" color="primary" />
-            </div>
-            <div class="config-info col">
-              <div class="row items-center">
-                <h3 class="config-title">Configuración de Solución de Captchas</h3>
-                <q-btn flat dense class="info-link q-ml-sm" @click="showApiKeyHelp = true">
-                  <span style="color: var(--color_button); font-weight: 700; font-size: 0.85rem;">¿Cómo obtenerla?</span>
-                </q-btn>
-              </div>
-              <p class="config-subtitle">Ingrese su API Key de 2Captcha para automatizar procesos (Opcional)</p>
-            </div>
-            <div class="config-action row items-center q-gutter-x-sm">
-              <q-input
-                v-if="!profile.apiKey"
-                outlined
-                v-model="newApiKey"
-                label="Introduzca su API Key"
-                class="api-key-input"
-                dense
-                hide-bottom-space
-              >
-                <template v-slot:prepend>
-                  <q-icon name="sym_o_key" size="18px" color="grey-6" />
-                </template>
-              </q-input>
-              <q-btn
-                v-if="!profile.apiKey"
-                class="bg-green-9 text-white save-config-btn"
-                unelevated
-                :loading="savingApiKey"
-                @click="updateApiKey"
-              >
-                Guardar
-              </q-btn>
-              <q-btn
-                v-if="profile.apiKey"
-                class="bg-blue-9 text-white save-config-btn"
-                unelevated
-                @click="openApiKeyModal"
-              >
-                Editar
-              </q-btn>
-            </div>
+        <!-- Carpeta Drive -->
+        <div class="stat-card-premium drive">
+          <div class="stat-icon-box">
+            <q-icon name="sym_o_folder" size="24px" />
+          </div>
+          <div class="stat-content">
+            <span class="stat-label">Carpeta Drive</span>
+            <a :href="driveFolderUrl" target="_blank" class="stat-link">
+              Ver Carpeta
+              <q-icon name="sym_o_open_in_new" size="16px" class="q-ml-xs" />
+            </a>
+          </div>
+        </div>
+
+        <!-- API Key (Solo supervisores) -->
+        <div class="stat-card-premium api" v-if="profile.role !== 'admin'">
+          <div class="stat-icon-box">
+            <q-icon name="sym_o_key" size="24px" />
+          </div>
+          <div class="stat-content">
+            <span class="stat-label">2Captcha API</span>
+            <q-btn
+              v-if="!profile.apiKey"
+              flat
+              dense
+              size="sm"
+              label="Configurar"
+              @click="showApiKeyModal = true"
+              class="api-btn"
+            />
+            <q-btn
+              v-else
+              flat
+              dense
+              size="sm"
+              label="Editar"
+              @click="openApiKeyModal"
+              class="api-btn"
+            />
           </div>
         </div>
       </div>
@@ -168,6 +159,18 @@
               map-options
               clearable
               style="min-width: 180px"
+              class="filter-select"
+            />
+            <q-select
+              outlined
+              dense
+              v-model="filterStatus"
+              :options="statusOptions"
+              label="Estado"
+              emit-value
+              map-options
+              clearable
+              style="min-width: 150px"
               class="filter-select"
             />
             <q-select
@@ -302,55 +305,11 @@
 
     </div>
 
-      <!-- API Key Help Dialog -->
-      <q-dialog v-model="showApiKeyHelp">
-        <q-card class="help-card-premium">
+      <!-- API Key Modal -->
+      <q-dialog v-model="showApiKeyModal" persistent>
+        <q-card style="min-width: 450px; border-radius: 16px;">
           <q-card-section class="row items-center q-pb-none">
-            <div class="text-h6 fw-800">¿Cómo obtener mi API Key?</div>
-            <q-space />
-            <q-btn icon="sym_o_close" flat round dense v-close-popup color="grey-7" />
-          </q-card-section>
-
-          <q-card-section class="q-pa-lg">
-            <div class="help-steps">
-              <div class="step-item">
-                <div class="step-number">1</div>
-                <div class="step-text">
-                  <strong>Regístrese:</strong> Cree una cuenta en <a href="https://2captcha.com?from=19102432" target="_blank" class="text-primary fw-700">2captcha.com</a>.
-                </div>
-              </div>
-              <div class="step-item">
-                <div class="step-number">2</div>
-                <div class="step-text">
-                  <strong>Cargue saldo:</strong> Ingrese fondos (el mínimo de $1 USD es suficiente para cientos de captchas).
-                </div>
-              </div>
-              <div class="step-item">
-                <div class="step-number">3</div>
-                <div class="step-text">
-                  <strong>Dashboard:</strong> En su panel principal, busque la sección <strong>"Account Settings"</strong> o <strong>"Dashboard"</strong>.
-                </div>
-              </div>
-              <div class="step-item">
-                <div class="step-number">4</div>
-                <div class="step-text">
-                  <strong>Copie la clave:</strong> Verá un código largo llamado <strong>"API Key"</strong>. Cópielo y péguelo en el panel de Repfora.
-                </div>
-              </div>
-            </div>
-
-            <q-banner dense class="bg-blue-1 text-blue-9 rounded-borders q-mt-md">
-                <q-icon name="sym_o_info" size="20px" color="blue-8" />
-              Esta clave permite que el sistema resuelva los retos visuales de las plataformas de forma automática.
-            </q-banner>
-          </q-card-section>
-        </q-card>
-      </q-dialog>
-
-      <q-dialog v-model="showApiKeyModal" persistent backdrop-filter="blur(10px)">
-        <q-card style="min-width: 420px; border-radius: 16px;">
-          <q-card-section class="row items-center q-pb-none">
-            <div class="text-h6">Editar API Key</div>
+            <div class="text-h6">Configuración 2Captcha</div>
             <q-space />
             <q-btn icon="sym_o_close" flat round dense v-close-popup />
           </q-card-section>
@@ -358,17 +317,23 @@
             <q-input
               outlined
               v-model="editApiKeyValue"
-              label="API Key de 2Captcha"
-              class="q-mb-md"
+              label="Tu API Key"
               dense
-            >
-              <template v-slot:prepend>
-                <q-icon name="sym_o_key" size="18px" color="grey-6" />
-              </template>
-            </q-input>
+              class="q-mb-md"
+            />
+            <div class="api-help-text q-mt-md">
+              <p class="q-mb-sm text-grey-7" style="font-size: 0.85rem;">
+                <strong>¿Cómo obtenerla?</strong>
+              </p>
+              <ol style="font-size: 0.8rem; color: #666; margin-left: 1rem; padding-left: 0.5rem;">
+                <li>Regístrate en <a href="https://2captcha.com?from=19102432" target="_blank" style="color: var(--color_button);">2captcha.com</a></li>
+                <li>Carga saldo ($1 USD es suficiente)</li>
+                <li>Copia tu API Key desde el Dashboard</li>
+              </ol>
+            </div>
           </q-card-section>
-          <q-card-actions align="right" class="q-px-lg q-pb-lg">
-            <q-btn flat label="Eliminar" color="negative" @click="deleteApiKey" class="q-mr-auto" :loading="savingApiKey" />
+          <q-card-actions align="right">
+            <q-btn flat label="Eliminar" color="negative" @click="deleteApiKey" class="q-mr-auto" :loading="savingApiKey" v-if="profile.apiKey" />
             <q-btn flat label="Cancelar" v-close-popup />
             <q-btn
               class="bg-green-9 text-white"
@@ -386,7 +351,7 @@
 
 
 <script setup>
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, watch, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
 import { useAuthStore } from '@/store/auth'
@@ -452,6 +417,7 @@ const printTable = () => {
 const filterPlatform = ref(null)
 const filterMonth = ref(null)
 const filterYear = ref(null)
+const filterStatus = ref(null)
 
 const platformOptions = [
   { label: 'SOI', value: 'soi' },
@@ -468,11 +434,38 @@ const monthOptions = [
   { label: 'Noviembre', value: '11' }, { label: 'Diciembre', value: '12' }
 ]
 const yearOptions = ['2024', '2025', '2026']
+const statusOptions = [
+  { label: 'Completado', value: 'success' },
+  { label: 'Pendiente', value: 'pending' },
+  { label: 'En Proceso', value: 'processing' },
+  { label: 'Fallido', value: 'error' }
+]
 
-const showApiKeyHelp = ref(false)
 const showApiKeyModal = ref(false)
 const editApiKeyValue = ref('')
 const loading = ref(false)
+
+// Total filtrado según los filtros actuales
+const filteredTotal = computed(() => {
+  return reports.value.filter(row => {
+    if (filterPlatform.value && row.platform !== filterPlatform.value) return false
+    if (filterStatus.value && row.status !== filterStatus.value) return false
+    if (filterYear.value) {
+      const rowYear = new Date(row.createdAt).getFullYear().toString()
+      if (rowYear !== filterYear.value) return false
+    }
+    if (filterMonth.value) {
+      const rowMonth = (new Date(row.createdAt).getMonth() + 1).toString()
+      if (rowMonth !== filterMonth.value) return false
+    }
+    return true
+  }).length
+})
+
+// URL de la carpeta de Drive del supervisor
+const driveFolderUrl = computed(() => {
+  return 'https://drive.google.com/drive/folders/143XVr4u9HYk77Erx4Dq9uVjMm8Jjh1EW'
+})
 
 const logout = () => {
   const authStore = useAuthStore()
@@ -507,56 +500,15 @@ const fetchProfile = async () => {
   }
 }
 
-const newApiKey = ref('')
 const savingApiKey = ref(false)
-const updateApiKey = async () => {
-  if (!newApiKey.value || newApiKey.value.trim() === '') {
-    $q.notify({
-      color: 'negative',
-      message: 'Por favor, introduzca una API Key válida',
-      icon: 'sym_o_warning',
-      position: 'top'
-    })
-    return
-  }
-
-  savingApiKey.value = true
-  try {
-    const res = await api.put('/supervisors/profile', { apiKey: newApiKey.value.trim() })
-    if (res.data.success) {
-      profile.value.apiKey = true
-      $q.notify({
-        color: 'positive',
-        message: 'Configuración guardada correctamente',
-        icon: 'sym_o_check_circle',
-        position: 'top'
-      })
-    }
-  } catch (error) {
-    const msg = error.response?.data?.message || 'Error al guardar la configuración'
-    $q.notify({
-      color: 'negative',
-      message: msg,
-      icon: 'sym_o_warning',
-      position: 'top'
-    })
-  } finally {
-    savingApiKey.value = false
-  }
-}
 
 const openApiKeyModal = async () => {
   try {
     const res = await api.get('/supervisors/profile/apikey')
     editApiKeyValue.value = res.data.apiKey || ''
     showApiKeyModal.value = true
-  } catch (error) {
-    $q.notify({
-      color: 'negative',
-      message: 'Error al obtener la API Key',
-      icon: 'sym_o_warning',
-      position: 'top'
-    })
+  } catch {
+    showApiKeyModal.value = true
   }
 }
 
@@ -564,33 +516,27 @@ const saveApiKeyFromModal = async () => {
   if (!editApiKeyValue.value || editApiKeyValue.value.trim() === '') {
     $q.notify({
       color: 'negative',
-      message: 'Por favor, introduzca una API Key válida',
-      icon: 'sym_o_warning',
-      position: 'top'
+      message: 'API Key inválida',
+      icon: 'sym_o_warning'
     })
     return
   }
 
   savingApiKey.value = true
   try {
-    const res = await api.put('/supervisors/profile', { apiKey: editApiKeyValue.value.trim() })
-    if (res.data.success) {
-      showApiKeyModal.value = false
-      profile.value.apiKey = true
-      $q.notify({
-        color: 'positive',
-        message: 'API Key actualizada correctamente',
-        icon: 'sym_o_check_circle',
-        position: 'top'
-      })
-    }
-  } catch (error) {
-    const msg = error.response?.data?.message || 'Error al guardar la API Key'
+    await api.put('/supervisors/profile', { apiKey: editApiKeyValue.value.trim() })
+    showApiKeyModal.value = false
+    profile.value.apiKey = true
+    $q.notify({
+      color: 'positive',
+      message: 'API Key guardada',
+      icon: 'sym_o_check_circle'
+    })
+  } catch {
     $q.notify({
       color: 'negative',
-      message: msg,
-      icon: 'sym_o_warning',
-      position: 'top'
+      message: 'Error al guardar',
+      icon: 'sym_o_warning'
     })
   } finally {
     savingApiKey.value = false
@@ -600,25 +546,20 @@ const saveApiKeyFromModal = async () => {
 const deleteApiKey = async () => {
   savingApiKey.value = true
   try {
-    // Al enviar el campo vacío, el backend lo interpreta como eliminar
-    const res = await api.put('/supervisors/profile', { apiKey: '' })
-    if (res.data.success) {
-      showApiKeyModal.value = false
-      profile.value.apiKey = false
-      $q.notify({
-        color: 'positive',
-        message: 'API Key eliminada correctamente',
-        icon: 'sym_o_check_circle',
-        position: 'top'
-      })
-    }
-  } catch (error) {
-    const msg = error.response?.data?.message || 'Error al eliminar la API Key'
+    await api.put('/supervisors/profile', { apiKey: '' })
+    showApiKeyModal.value = false
+    profile.value.apiKey = false
+    editApiKeyValue.value = ''
+    $q.notify({
+      color: 'positive',
+      message: 'API Key eliminada',
+      icon: 'sym_o_check_circle'
+    })
+  } catch {
     $q.notify({
       color: 'negative',
-      message: msg,
-      icon: 'sym_o_warning',
-      position: 'top'
+      message: 'Error al eliminar',
+      icon: 'sym_o_warning'
     })
   } finally {
     savingApiKey.value = false
@@ -714,12 +655,17 @@ const loadReports = async (page = pagination.value.page) => {
     if (filterPlatform.value) {
       url += `&platform=${encodeURIComponent(filterPlatform.value)}`
     }
+    if (filterStatus.value) {
+      url += `&status=${encodeURIComponent(filterStatus.value)}`
+      console.log('Filtrando por estado:', filterStatus.value)
+    }
     if (filterMonth.value) {
       url += `&month=${encodeURIComponent(filterMonth.value)}`
     }
     if (filterYear.value) {
       url += `&year=${encodeURIComponent(filterYear.value)}`
     }
+    console.log('URL final:', url)
     const res = await api.get(url)
     if (res.data.success) {
       reports.value = res.data.data
@@ -738,7 +684,7 @@ watch(searchFilter, () => {
   pagination.value.page = 1
   loadReports(1)
 })
-watch([filterPlatform, filterMonth, filterYear], () => {
+watch([filterPlatform, filterMonth, filterYear, filterStatus], () => {
   pagination.value.page = 1
   loadReports(1)
 })
@@ -927,8 +873,14 @@ onMounted(async () => {
 /* Analytics */
 .analytics-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(3, 1fr);
   gap: 1.5rem;
+}
+
+@media (max-width: 900px) {
+  .analytics-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .stat-card-premium {
@@ -942,6 +894,14 @@ onMounted(async () => {
   box-shadow: var(--shadow);
 }
 
+.stat-card-premium.drive {
+  border-left: 4px solid #4285f4;
+}
+
+.stat-card-premium.api {
+  border-left: 4px solid var(--color_button);
+}
+
 .stat-icon-box {
   width: 56px;
   height: 56px;
@@ -951,6 +911,16 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.stat-card-premium.drive .stat-icon-box {
+  background-color: #e8f0fe;
+  color: #4285f4;
+}
+
+.stat-card-premium.api .stat-icon-box {
+  background-color: var(--primary-light);
+  color: var(--color_button);
 }
 
 .stat-label {
@@ -967,6 +937,26 @@ onMounted(async () => {
   font-weight: 800;
   margin: 0;
   line-height: 1;
+}
+
+.stat-link {
+  display: inline-flex;
+  align-items: center;
+  color: #4285f4;
+  font-weight: 600;
+  font-size: 1.1rem;
+  text-decoration: none;
+  transition: opacity 0.2s;
+}
+
+.stat-link:hover {
+  opacity: 0.8;
+}
+
+.api-btn {
+  background: var(--color_button);
+  color: white;
+  border-radius: 8px;
 }
 
 /* History Card */
