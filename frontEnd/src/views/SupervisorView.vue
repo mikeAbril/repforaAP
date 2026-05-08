@@ -9,7 +9,7 @@
             <img src="@/assets/logo-sena.png" alt="SENA Logo" class="mini-logo" />
           </div>
           <div>
-            <h1 class="dashboard-title">Panel de Supervisor</h1>
+            <h1 class="dashboard-title">Bienvenido, {{ profile.name }}</h1>
             <p class="dashboard-subtitle">Gestión y monitoreo de certificados de seguridad social</p>
           </div>
         </div>
@@ -28,22 +28,42 @@
           <q-btn
             flat
             class="header-btn-premium secondary"
-            @click="showSettings = true"
+            round
           >
-            <div class="row items-center no-wrap">
-              <q-icon name="sym_o_person" size="18px" class="q-mr-sm" />
-              <span>Mi Perfil</span>
-            </div>
+            <q-icon name="sym_o_person" size="20px" />
+            <q-menu>
+              <div class="profile-menu">
+                <div class="profile-header">
+                  <div class="profile-icon">
+                    <q-icon name="sym_o_person" size="28px" color="white" />
+                  </div>
+                  <div class="profile-info">
+                    <p class="profile-name">{{ profile.name }}</p>
+                    <p class="profile-role">{{ profile.role === 'admin' ? 'Administrador' : 'Supervisor' }}</p>
+                  </div>
+                </div>
+                <q-separator />
+                <div class="profile-details">
+                  <div class="detail-item">
+                    <q-icon name="sym_o_badge" size="18px" color="grey-6" class="q-mr-sm" />
+                    <span>{{ profile.documentNumber }}</span>
+                  </div>
+                </div>
+                <q-separator />
+                <div class="profile-notice">
+                  <q-icon name="sym_o_lock" size="16px" color="grey-6" class="q-mr-sm" />
+                  <span>Información gestionada por el administrador</span>
+                </div>
+              </div>
+            </q-menu>
           </q-btn>
           <q-btn
             flat
             class="header-btn-premium logout"
             @click="logout"
+            round
           >
-            <div class="row items-center no-wrap">
-              <q-icon name="sym_o_logout" size="18px" class="q-mr-sm" />
-              <span>Salir</span>
-            </div>
+            <q-icon name="sym_o_logout" size="20px" />
           </q-btn>
         </div>
       </header>
@@ -191,7 +211,7 @@
 
           <q-separator color="grey-1" />
 
-          <div class="q-pa-md" ref="tableRef">
+          <div class="q-pa-md">
             <q-table
               flat
               bordered
@@ -282,65 +302,6 @@
 
     </div>
 
-    <!-- Settings Dialog Premium -->
-    <q-dialog v-model="showSettings" persistent backdrop-filter="blur(10px)">
-      <q-card class="settings-card-premium shadow-24">
-        <q-card-section class="bg-green-9 q-px-lg">
-          <div class="row items-center q-py-sm">
-            <q-space />
-            <div class="col text-center">
-              <h5 class="q-ma-none text-white text-weight-bold text-uppercase">Mi Perfil</h5>
-              <span class="dialog-subtitle">Información técnica del supervisor</span>
-            </div>
-            <q-space />
-            <q-btn icon="sym_o_close" flat round dense size="sm" class="text-white" v-close-popup />
-          </div>
-        </q-card-section>
-
-        <q-card-section class="q-pa-lg">
-          <div class="q-gutter-y-lg">
-            <div class="field-group">
-              <label class="field-label">Nombre Completo</label>
-              <q-input
-                filled
-                v-model="profile.name"
-                readonly
-                dense
-                class="premium-input-readonly"
-              >
-                <template v-slot:prepend>
-                  <q-icon name="sym_o_person" size="20px" />
-                </template>
-              </q-input>
-            </div>
-
-            <div class="field-group">
-              <label class="field-label">Número de Documento</label>
-              <q-input
-                filled
-                v-model="profile.documentNumber"
-                readonly
-                dense
-                class="premium-input-readonly"
-              >
-                <template v-slot:prepend>
-                  <q-icon name="sym_o_badge" size="20px" />
-                </template>
-              </q-input>
-            </div>
-
-            <div class="info-notice row items-start no-wrap q-pa-md">
-              <q-icon name="sym_o_lock" size="20px" color="grey-6" class="q-mr-md" />
-              <p class="notice-text">
-                Esta información es gestionada por el administrador. <br>
-                Si requiere cambios, por favor realice una solicitud formal.
-              </p>
-            </div>
-          </div>
-        </q-card-section>
-      </q-card>
-    </q-dialog>
-
       <!-- API Key Help Dialog -->
       <q-dialog v-model="showApiKeyHelp">
         <q-card class="help-card-premium">
@@ -430,20 +391,63 @@ import { useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
 import { useAuthStore } from '@/store/auth'
 import api from '@/plugins/axios'
-import html2canvas from 'html2canvas'
+import * as XLSX from 'xlsx'
 
 const $q = useQuasar()
 const router = useRouter()
 const searchFilter = ref('')
-const tableRef = ref(null)
 
-const printTable = async () => {
-  if (!tableRef.value) return
-  const canvas = await html2canvas(tableRef.value, { scale: 2, useCORS: true })
-  const link = document.createElement('a')
-  link.download = `certificados_${filterYear.value || 'todos'}_${filterMonth.value || 'todos'}.png`
-  link.href = canvas.toDataURL('image/png')
-  link.click()
+const printTable = () => {
+  if (reports.value.length === 0) {
+    $q.notify({
+      color: 'negative',
+      message: 'No hay datos para exportar',
+      icon: 'sym_o_warning',
+      position: 'top'
+    })
+    return
+  }
+
+  // Preparar datos para Excel
+  const excelData = reports.value.map(row => ({
+    'Fecha Solicitud': new Date(row.createdAt).toLocaleString('es-CO'),
+    'Contratista': row.instructorId?.fullName || 'Desconocido',
+    'Documento': row.instructorId ? `${row.instructorId.documentType} ${row.instructorId.documentNumber}` : 'N/A',
+    'Plataforma': formatPlatform(row.platform),
+    'Estado': formatStatus(row.status),
+    'URL PDF': row.driveUrl || 'N/A'
+  }))
+
+  // Crear hoja de trabajo
+  const worksheet = XLSX.utils.json_to_sheet(excelData)
+
+  // Ajustar ancho de columnas
+  const columnWidths = [
+    { wch: 25 }, // Fecha Solicitud
+    { wch: 35 }, // Contratista
+    { wch: 20 }, // Documento
+    { wch: 20 }, // Plataforma
+    { wch: 15 }, // Estado
+    { wch: 50 }  // URL PDF
+  ]
+  worksheet['!cols'] = columnWidths
+
+  // Crear libro de trabajo
+  const workbook = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Certificados')
+
+  // Generar nombre del archivo
+  const fileName = `certificados_${filterYear.value || 'todos'}_${filterMonth.value || 'todos'}.xlsx`
+
+  // Descargar archivo
+  XLSX.writeFile(workbook, fileName)
+
+  $q.notify({
+    color: 'positive',
+    message: 'Archivo Excel exportado correctamente',
+    icon: 'sym_o_check_circle',
+    position: 'top'
+  })
 }
 const filterPlatform = ref(null)
 const filterMonth = ref(null)
@@ -469,7 +473,6 @@ const showApiKeyHelp = ref(false)
 const showApiKeyModal = ref(false)
 const editApiKeyValue = ref('')
 const loading = ref(false)
-const showSettings = ref(false)
 
 const logout = () => {
   const authStore = useAuthStore()
@@ -789,6 +792,7 @@ onMounted(async () => {
   color: var(--text-dark);
   margin: 0;
   letter-spacing: -0.02em;
+  line-height: 3rem;
 }
 
 .logo-container-mini {
@@ -813,7 +817,7 @@ onMounted(async () => {
 .dashboard-subtitle {
   color: var(--text-muted);
   font-size: 0.9rem;
-  margin: 0.15rem 0 0;
+  margin: 0 0 0;
 }
 
 .header-btn-premium {
@@ -1085,5 +1089,67 @@ onMounted(async () => {
 @media (max-width: 600px) {
   .dashboard-header { flex-direction: column; align-items: flex-start; gap: 1.5rem; }
   .history-card-premium { border-radius: 0; border-left: none; border-right: none; }
+}
+
+/* Profile Menu */
+.profile-menu {
+  min-width: 280px;
+  padding: 0;
+}
+
+.profile-header {
+  background: var(--primary, #2e7d32);
+  padding: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.profile-icon {
+  background: rgba(255, 255, 255, 0.2);
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.profile-info {
+  flex: 1;
+}
+
+.profile-name {
+  color: white;
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.profile-role {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.8rem;
+  margin: 0.2rem 0 0;
+}
+
+.profile-details {
+  padding: 1rem;
+}
+
+.detail-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text-dark);
+  font-size: 0.9rem;
+}
+
+.profile-notice {
+  padding: 1rem;
+  background: var(--bg-light, #f4f7f5);
+  display: flex;
+  align-items: center;
+  font-size: 0.8rem;
+  color: var(--text-muted);
 }
 </style>

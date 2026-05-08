@@ -55,104 +55,146 @@
       </q-card>
 
       <!-- Dialog for Create/Edit -->
-      <q-dialog v-model="showDialog" persistent>
-        <q-card class="form-card-premium">
-          <q-card-section class="bg-green-9 q-px-lg">
-            <h5 class="q-mt-sm q-mb-sm text-white text-center text-weight-bold">
-              {{ isEditing ? 'MODIFICA LA INFORMACIÓN' : 'DILIGENCIA LA INFORMACIÓN' }}
-            </h5>
+      <q-dialog v-model="showDialog" persistent backdrop-filter="blur(10px)">
+        <q-card class="form-card-premium shadow-24">
+          <q-card-section class="dialog-header">
+            <div class="row items-center q-py-sm">
+              <div class="header-icon">
+                <q-icon :name="isEditing ? 'sym_o_edit' : 'sym_o_person_add'" size="24px" color="white" />
+              </div>
+              <div class="header-text">
+                <h5 class="q-ma-none text-white text-weight-bold">
+                  {{ isEditing ? 'Editar Supervisor' : 'Nuevo Supervisor' }}
+                </h5>
+                <span class="dialog-subtitle">
+                  {{ isEditing ? 'Actualice la información del supervisor' : 'Complete los datos para registrar un nuevo supervisor' }}
+                </span>
+              </div>
+            </div>
           </q-card-section>
-          <div class="q-pa-md">
-            <q-form @submit="saveSupervisor" class="q-gutter-md">
-              <div class="row q-col-gutter-md">
-                <div class="col-12 col-md-4">
-                  <q-select
-                    filled
-                    v-model="formData.documentType"
-                    :options="['CC', 'CE', 'PA', 'TI', 'CD', 'PE', 'PT', 'RC', 'SC']"
-                    label="Tipo Doc"
-                    dense
-                    class="style-select"
-                    :rules="[val => !!val || 'El campo es requerido']"
-                  />
+
+          <q-card-section class="dialog-content q-pa-xl">
+            <q-form @submit="saveSupervisor" class="q-gutter-lg">
+              <div class="row q-col-gutter-lg">
+                <div class="col-12 col-md-5">
+                  <div class="field-group">
+                    <label class="field-label">Tipo de Documento</label>
+                    <q-select
+                      filled
+                      v-model="formData.documentType"
+                      :options="documentTypeOptions"
+                      label="Seleccione..."
+                      emit-value
+                      map-options
+                      dense
+                      class="style-select"
+                      :rules="[val => !!val || 'El campo es requerido']"
+                    >
+                      <template v-slot:prepend>
+                        <q-icon name="sym_o_badge" size="20px" />
+                      </template>
+                    </q-select>
+                  </div>
                 </div>
-                <div class="col-12 col-md-8">
-                  <q-input
-                    filled
-                    v-model="formData.documentNumber"
-                    label="Número Documento"
-                    dense
-                    lazy-rules
-                    :rules="[val => (val && val.trim().length > 0) || 'El campo es requerido']"
-                  >
-                    <template v-slot:prepend>
-                      <q-icon name="sym_o_badge" />
-                    </template>
-                  </q-input>
-                </div>
-                <div class="col-12" v-if="isEditing">
-                  <q-input
-                    filled
-                    v-model="formData.documentIssueDate"
-                    label="Fecha Expedición (AAAA/MM/DD)"
-                    dense
-                    mask="####/##/##"
-                  >
-                    <template v-slot:prepend>
-                      <q-icon name="sym_o_edit_calendar" />
-                    </template>
-                  </q-input>
+                <div class="col-12 col-md-7">
+                  <div class="field-group">
+                    <label class="field-label">Número de Documento</label>
+                    <q-input
+                      filled
+                      v-model="formData.documentNumber"
+                      label="Ingrese el número..."
+                      dense
+                      lazy-rules
+                      :rules="[val => (val && val.trim().length > 0) || 'El campo es requerido']"
+                    >
+                      <template v-slot:prepend>
+                        <q-icon name="sym_o_tag" size="20px" />
+                      </template>
+                    </q-input>
+                  </div>
                 </div>
 
                 <div class="col-12">
-                  <q-input
-                    filled
-                    v-model="formData.name"
-                    label="Nombre Completo"
-                    dense
-                    lazy-rules
-                    :rules="[val => (val && val.trim().length > 0) || 'El campo es requerido']"
-                  >
-                    <template v-slot:prepend>
-                      <q-icon name="sym_o_person" />
-                    </template>
-                  </q-input>
-                </div>
-                <div class="col-12">
-                  <q-input
-                    filled
-                    v-model="formData.email"
-                    label="Correo Electrónico"
-                    dense
-                    type="email"
-                    lazy-rules
-                    :rules="[val => (val && val.trim().length > 0) || 'El campo es requerido']"
-                  >
-                    <template v-slot:prepend>
-                      <q-icon name="sym_o_email" />
-                    </template>
-                  </q-input>
-                </div>
-                <div class="col-12">
-                  <q-select
-                    filled
-                    v-model="formData.role"
-                    :options="['admin', 'supervisor']"
-                    label="Rol"
-                    dense
-                    class="style-select"
-                    :rules="[val => !!val || 'El campo es requerido']"
-                  />
+                  <div class="field-group">
+                    <label class="field-label">Nombre Completo</label>
+                    <q-input
+                      filled
+                      v-model="formData.name"
+                      label="Nombres y apellidos..."
+                      dense
+                      lazy-rules
+                      :rules="[val => (val && val.trim().length > 0) || 'El campo es requerido']"
+                    >
+                      <template v-slot:prepend>
+                        <q-icon name="sym_o_person" size="20px" />
+                      </template>
+                    </q-input>
+                  </div>
                 </div>
 
+                <div class="col-12">
+                  <div class="field-group">
+                    <label class="field-label">Correo Electrónico</label>
+                    <q-input
+                      filled
+                      v-model="formData.email"
+                      label="ejemplo@correo.com"
+                      dense
+                      type="email"
+                      lazy-rules
+                      :rules="[val => (val && val.trim().length > 0) || 'El campo es requerido']"
+                    >
+                      <template v-slot:prepend>
+                        <q-icon name="sym_o_email" size="20px" />
+                      </template>
+                    </q-input>
+                  </div>
+                </div>
+
+                <div class="col-12">
+                  <div class="field-group">
+                    <label class="field-label">Rol de Acceso</label>
+                    <q-select
+                      filled
+                      v-model="formData.role"
+                      :options="roleOptions"
+                      label="Seleccione el rol..."
+                      emit-value
+                      map-options
+                      dense
+                      class="style-select"
+                      :rules="[val => !!val || 'El campo es requerido']"
+                    >
+                      <template v-slot:prepend>
+                        <q-icon name="sym_o_admin_panel_settings" size="20px" />
+                      </template>
+                    </q-select>
+                  </div>
+                </div>
               </div>
 
-              <div class="row justify-end q-mt-md">
-                <q-btn label="Cancelar" flat color="grey" v-close-popup />
-                <q-btn :label="isEditing ? 'Actualizar' : 'Crear'" class="bg-green-9 text-white" type="submit" :loading="saving" />
+              <q-separator class="q-mt-lg q-mb-md" />
+
+              <div class="row justify-end q-gutter-md">
+                <q-btn
+                  label="Cancelar"
+                  flat
+                  color="grey-7"
+                  class="cancel-btn"
+                  v-close-popup
+                />
+                <q-btn
+                  :label="isEditing ? 'Actualizar Supervisor' : 'Crear Supervisor'"
+                  class="save-btn bg-green-9 text-white"
+                  type="submit"
+                  :loading="saving"
+                  unelevated
+                >
+                  <q-icon :name="isEditing ? 'sym_o_save' : 'sym_o_add'" class="q-ml-xs" size="18px" />
+                </q-btn>
               </div>
             </q-form>
-          </div>
+          </q-card-section>
         </q-card>
       </q-dialog>
     </div>
@@ -182,6 +224,23 @@ const formData = ref({
   email: '',
   role: 'supervisor'
 })
+
+const documentTypeOptions = [
+  { label: 'Cédula de Ciudadanía', value: 'CC' },
+  { label: 'Cédula de Extranjería', value: 'CE' },
+  { label: 'Pasaporte', value: 'PA' },
+  { label: 'Tarjeta de Identidad', value: 'TI' },
+  { label: 'Carné Diplomático', value: 'CD' },
+  { label: 'Permiso Especial', value: 'PE' },
+  { label: 'Permiso por Protección Temporal', value: 'PT' },
+  { label: 'Registro Civil', value: 'RC' },
+  { label: 'Salvo Conducto', value: 'SC' }
+]
+
+const roleOptions = [
+  { label: 'Administrador', value: 'admin' },
+  { label: 'Supervisor', value: 'supervisor' }
+]
 
 const columns = [
   { name: 'name', label: 'Nombre', align: 'left', field: 'name', sortable: true },
@@ -295,9 +354,75 @@ onMounted(loadSupervisors)
 }
 
 .form-card-premium {
-  width: 500px;
+  width: 600px;
   max-width: 90vw;
-  border-radius: var(--radius);
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+.dialog-header {
+  background: linear-gradient(135deg, var(--color_button) 0%, #1b5e20 100%);
+  padding: 1.5rem 2.5rem;
+}
+
+.header-icon {
+  background: rgba(255, 255, 255, 0.2);
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 1rem;
+}
+
+.header-text h5 {
+  font-size: 1.3rem;
+  letter-spacing: -0.02em;
+}
+
+.dialog-subtitle {
+  display: block;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.8rem;
+  font-weight: 500;
+  margin-top: 0.25rem;
+}
+
+.dialog-content {
+  padding: 2rem 2.5rem !important;
+}
+
+.field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.field-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  margin-left: 0.25rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.style-select, .q-input {
+  border-radius: 12px !important;
+}
+
+.cancel-btn {
+  border-radius: 10px;
+  font-weight: 600;
+  padding: 0.5rem 1.5rem;
+}
+
+.save-btn {
+  border-radius: 10px;
+  font-weight: 700;
+  padding: 0.5rem 1.5rem;
+  letter-spacing: 0.01em;
 }
 
 .add-btn-premium {

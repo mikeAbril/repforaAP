@@ -177,7 +177,7 @@ export const formConfigs = {
           { name: 'documentNumber', label: 'No. de documento', type: 'input', isNumber: true, col: 6 },
           { name: 'fullName', label: 'Nombre Completo', type: 'input', col: 12 },
           { name: 'email', label: 'Correo Electrónico', type: 'input', col: 12 },
-          { name: 'eps', label: 'EPS', type: 'select', options: epsOptionsPure, allowNewValue: true, col: 12 },
+          { name: 'eps', label: 'EPS', type: 'select', options: epsOptionsPure, col: 12 },
           { name: 'mes', label: 'Mes', type: 'select', options: 'meses', col: 6 },
           { name: 'anio', label: 'Año', type: 'select', options: 'anios', col: 6 }
         ]
@@ -224,7 +224,7 @@ export const formConfigs = {
           { name: 'documentNumber', label: 'No. de documento', type: 'input', isNumber: true, col: 6 },
           { name: 'fullName', label: 'Nombre Completo', type: 'input', col: 12 },
           { name: 'email', label: 'Correo Electrónico', type: 'input', col: 12 },
-          { name: 'eps', label: 'EPS', type: 'select', options: epsOptionsPure, allowNewValue: true, col: 12 },
+          { name: 'eps', label: 'EPS', type: 'select', options: epsOptionsPure, col: 12 },
           { name: 'mes', label: 'Periodo (Mes)', type: 'select', options: 'meses', col: 6 },
           { name: 'anio', label: 'Periodo (Año)', type: 'select', options: 'anios', col: 6 }
         ]
@@ -281,7 +281,7 @@ export const formConfigs = {
           { name: 'documentIssueDate', label: 'Fecha de Expedición (AAAA-MM-DD)', type: 'date', col: 6 },
           { name: 'fullName', label: 'Nombre Completo', type: 'input', col: 6 },
           { name: 'email', label: 'Correo Electrónico', type: 'input', col: 6 },
-          { name: 'eps', label: 'EPS', type: 'select', options: epsOptionsPure, allowNewValue: true, col: 12 },
+          { name: 'eps', label: 'EPS', type: 'select', options: epsOptionsPure, col: 12 },
           { name: 'mes', label: 'Mes Periodo', type: 'select', options: 'meses', col: 6 },
           { name: 'anio', label: 'Año Periodo', type: 'select', options: 'anios', col: 6 }
         ]

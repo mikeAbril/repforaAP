@@ -163,8 +163,9 @@
       <!-- Overlay de carga tras enviar solicitud -->
       <div v-if="showSuccessOverlay" class="success-overlay">
         <div class="success-overlay-content">
-          <q-spinner color="white" size="50px" />
-          <p class="success-overlay-text">Procesando solicitud...</p>
+          <q-spinner v-if="isProcessing" color="white" size="50px" />
+          <q-icon v-else name="sym_o_check_circle" size="50px" color="white" />
+          <p class="success-overlay-text">{{ overlayMessage }}</p>
         </div>
       </div>
 
@@ -182,6 +183,8 @@ import { postData, getData } from '@/services/apiClient';
 const router = useRouter();
 const $q = useQuasar();
 const isSubmitting = ref(false);
+const isProcessing = ref(false);
+const overlayMessage = ref('Procesando solicitud...');
 const showSuccessOverlay = ref(false);
 const formRef = ref(null);
 const selectedPlatform = ref(null);
@@ -345,6 +348,9 @@ const filterFn = (val, update, fieldName, originalOptions) => {
 const onSubmit = async () => {
   if (!selectedPlatform.value) return;
   isSubmitting.value = true;
+  isProcessing.value = true;
+  overlayMessage.value = 'Procesando solicitud...';
+  showSuccessOverlay.value = true;
   try {
     const payload = {
       documentType: formData.documentType,
@@ -372,13 +378,15 @@ const onSubmit = async () => {
     console.log('Enviando datos a /reports:', payload);
     await postData('/reports', payload);
 
-    showSuccessOverlay.value = true;
+    isProcessing.value = false;
+    overlayMessage.value = '¡Solicitud enviada correctamente!';
 
     setTimeout(() => {
       window.location.reload();
-    }, 3000);
+    }, 2000);
   } catch (error) {
     console.error('Error al enviar solicitud:', error);
+    showSuccessOverlay.value = false;
     $q.notify({
       color: 'negative',
       position: 'top',
