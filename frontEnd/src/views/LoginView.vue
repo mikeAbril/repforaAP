@@ -102,6 +102,12 @@
                 <q-checkbox v-model="rememberMe" label="Recordarme" class="remember-check" />
               </div>
 
+              <div class="text-center q-mb-md">
+                <q-btn flat no-caps dense class="forgot-link" @click="router.push('/forgot-password')">
+                  ¿Olvidaste tu contraseña?
+                </q-btn>
+              </div>
+
               <q-btn
                 type="submit"
                 class="submit-btn-premium"
@@ -196,7 +202,7 @@ const onSubmit = async () => {
 .login-container {
   width: 100%;
   max-width: 900px;
-  height: 560px;
+  min-height: 560px;
   background: var(--white);
   border-radius: 28px;
   display: flex;
@@ -319,12 +325,21 @@ const onSubmit = async () => {
 
 .form-extras {
   margin-bottom: 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .remember-check {
   font-size: 0.85rem;
   font-weight: 600;
   color: var(--text-muted);
+}
+
+.forgot-link {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color_button);
 }
 
 .submit-btn-premium {

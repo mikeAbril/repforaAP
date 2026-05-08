@@ -5,6 +5,7 @@ import LoginView from '@/views/LoginView.vue'
 import SupervisorView from '@/views/SupervisorView.vue'
 import AdminSupervisorsView from '@/views/AdminSupervisorsView.vue'
 import ChangePasswordView from '@/views/ChangePasswordView.vue'
+import ForgotPasswordView from '@/views/ForgotPasswordView.vue'
 import HomeView from '@/views/HomeView.vue'
 import UnifiedForm from '@/components/UnifiedForm.vue'
 
@@ -13,6 +14,12 @@ const routes = [
         path: '/login',
         name: 'Login',
         component: LoginView,
+        meta: { guestOnly: true }
+    },
+    {
+        path: '/forgot-password',
+        name: 'ForgotPassword',
+        component: ForgotPasswordView,
         meta: { guestOnly: true }
     },
     {
