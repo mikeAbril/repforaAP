@@ -445,21 +445,8 @@ const showApiKeyModal = ref(false)
 const editApiKeyValue = ref('')
 const loading = ref(false)
 
-// Total filtrado según los filtros actuales
 const filteredTotal = computed(() => {
-  return reports.value.filter(row => {
-    if (filterPlatform.value && row.platform !== filterPlatform.value) return false
-    if (filterStatus.value && row.status !== filterStatus.value) return false
-    if (filterYear.value) {
-      const rowYear = new Date(row.createdAt).getFullYear().toString()
-      if (rowYear !== filterYear.value) return false
-    }
-    if (filterMonth.value) {
-      const rowMonth = (new Date(row.createdAt).getMonth() + 1).toString()
-      if (rowMonth !== filterMonth.value) return false
-    }
-    return true
-  }).length
+  return pagination.value.rowsNumber
 })
 
 // URL de la carpeta de Drive del supervisor

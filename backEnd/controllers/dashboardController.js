@@ -32,7 +32,11 @@ export const getReports = async (req, res, next) => {
         };
 
         if (status) {
-            filter.status = status;
+            if (status === 'success') {
+                filter.status = { $in: ['success', 'downloaded'] };
+            } else {
+                filter.status = status;
+            }
         }
 
         if (platform) {
