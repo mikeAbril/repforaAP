@@ -46,6 +46,11 @@ const supervisorSchema = new Schema(
             type: Boolean,
             default: true,
         },
+        driveFolderUrl: {
+            type: String,
+            default: null,
+            trim: true,
+        },
         isConfigured: {
             type: Boolean,
             default: false,

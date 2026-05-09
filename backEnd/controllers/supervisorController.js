@@ -1,6 +1,7 @@
 import Supervisor from "../models/Supervisor.js";
 import bcrypt from "bcryptjs";
 import { encrypt, decrypt } from "../utils/crypto.js";
+import { getDriveClient, validateAndGetRootId } from "../services/driveService.js";
 
 /**
  * GET /api/supervisors/list
@@ -9,7 +10,7 @@ import { encrypt, decrypt } from "../utils/crypto.js";
  */
 export const listSupervisorsPublic = async (req, res, next) => {
     try {
-        const supervisors = await Supervisor.find({}, "name _id").sort({ name: 1 });
+        const supervisors = await Supervisor.find({ role: "supervisor" }, "name _id").sort({ name: 1 });
 
         res.status(200).json({
             success: true,
@@ -188,5 +189,103 @@ export const adminListAllSupervisors = async (req, res, next) => {
         res.json({ success: true, supervisors });
     } catch (error) {
         next(error);
+    }
+};
+
+/**
+ * DELETE /api/supervisors/admin/:id
+ * Elimina un supervisor (Solo Admin)
+ */
+export const adminDeleteSupervisor = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+
+        // Opcional: Evitar que el admin se borre a sí mismo
+        if (req.supervisor && req.supervisor.id === id) {
+            return res.status(400).json({ success: false, message: "No puedes eliminar tu propia cuenta" });
+        }
+
+        const supervisor = await Supervisor.findByIdAndDelete(id);
+
+        if (!supervisor) {
+            return res.status(404).json({ success: false, message: "Supervisor no encontrado" });
+        }
+
+        res.json({ success: true, message: "Supervisor eliminado exitosamente" });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * GET /api/supervisors/profile/drive-link
+ * Obtiene o crea la carpeta de Drive del supervisor y retorna la URL.
+ */
+export const getDriveLink = async (req, res, next) => {
+    try {
+        const supervisor = await Supervisor.findById(req.supervisor.id);
+        if (!supervisor) {
+            return res.status(404).json({ success: false, message: "Supervisor no encontrado" });
+        }
+
+        // Si ya lo tenemos guardado y NO es admin, lo devolvemos rápido
+        if (supervisor.role !== "admin" && supervisor.driveFolderUrl) {
+            return res.json({ success: true, url: supervisor.driveFolderUrl });
+        }
+
+        const drive = getDriveClient();
+        const activeRootId = await validateAndGetRootId(drive);
+
+        // Si es admin, devolver la raíz de todos los supervisores
+        if (supervisor.role === "admin") {
+            return res.json({ success: true, url: `https://drive.google.com/drive/folders/${activeRootId}` });
+        }
+
+        // Si no lo tenemos y es supervisor normal, buscamos/creamos la carpeta en Drive
+        const folderName = supervisor.name.toUpperCase().trim();
+
+        const response = await drive.files.list({
+            q: `name='${folderName}' and '${activeRootId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`,
+            fields: "files(id, webViewLink)",
+            supportsAllDrives: true,
+            includeItemsFromAllDrives: true,
+        });
+
+        let folderUrl = null;
+
+        if (response.data.files.length > 0) {
+            folderUrl = response.data.files[0].webViewLink;
+        } else {
+            // No existe, crear la carpeta
+            const folder = await drive.files.create({
+                requestBody: {
+                    name: folderName,
+                    mimeType: "application/vnd.google-apps.folder",
+                    parents: [activeRootId],
+                },
+                fields: "id, webViewLink",
+                supportsAllDrives: true,
+            });
+            folderUrl = folder.data.webViewLink;
+            
+            // Hacerla pública para lectura
+            await drive.permissions.create({
+                fileId: folder.data.id,
+                requestBody: {
+                    role: "reader",
+                    type: "anyone",
+                },
+            });
+        }
+
+        // Guardar la URL en la base de datos para futuras consultas
+        supervisor.driveFolderUrl = folderUrl;
+        await supervisor.save();
+
+        res.json({ success: true, url: folderUrl });
+    } catch (error) {
+        console.error("Error obteniendo carpeta de Drive:", error.message);
+        // Si hay error (ej: sin credenciales), devolver la raíz por defecto
+        res.json({ success: true, url: "https://drive.google.com/drive/folders/" + process.env.GOOGLE_DRIVE_FOLDER_ID });
     }
 };

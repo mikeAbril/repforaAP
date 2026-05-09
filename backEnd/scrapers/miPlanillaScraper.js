@@ -21,8 +21,21 @@ const DOC_LABEL_MAP = {
 export const scrapeMiPlanilla = async (report, downloadDir) => {
     const { instructor, platformData } = report;
     const { documentType, documentNumber, fullName, apiKey } = instructor;
-    const { numeroPlanilla, mes, anio, valorPagado } = platformData;
-    const { fechaPagoDia, fechaPagoMes, fechaPagoAnio } = platformData;
+    const { numeroPlanilla, mes, anio, valorPagado, fechaPago } = platformData;
+
+    let fechaPagoDia, fechaPagoMes, fechaPagoAnio;
+    if (fechaPago) {
+        // Formato fechaPago esperado: YYYY-MM-DD
+        const [yyyy, mm, dd] = fechaPago.split('-');
+        fechaPagoAnio = yyyy;
+        fechaPagoDia = parseInt(dd, 10).toString();
+        
+        const monthNames = [
+            'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+            'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+        ];
+        fechaPagoMes = monthNames[parseInt(mm, 10) - 1];
+    }
 
     if (!apiKey) {
         return { success: false, error: "El supervisor no tiene configurada la API Key de 2Captcha." };

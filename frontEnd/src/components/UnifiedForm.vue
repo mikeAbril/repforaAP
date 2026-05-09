@@ -91,16 +91,15 @@
                     class="premium-input"
                   >
                     <template v-slot:append>
-                      <q-icon name="sym_o_event" class="cursor-pointer">
-                        <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                          <q-date v-model="formData[field.name]" mask="YYYY-MM-DD">
-                            <div class="row items-center justify-end">
-                              <q-btn v-close-popup label="Cerrar" color="primary" flat />
-                            </div>
-                          </q-date>
-                        </q-popup-proxy>
-                      </q-icon>
+                      <q-icon name="sym_o_event" class="cursor-pointer" />
                     </template>
+                    <q-popup-proxy transition-show="scale" transition-hide="scale">
+                      <q-date v-model="formData[field.name]" mask="YYYY-MM-DD">
+                        <div class="row items-center justify-end">
+                          <q-btn v-close-popup label="Cerrar" color="primary" flat />
+                        </div>
+                      </q-date>
+                    </q-popup-proxy>
                   </q-input>
                 </div>
                 
@@ -213,7 +212,7 @@ const fetchSupervisors = async () => {
 fetchSupervisors();
 
 const SKIP_FIELDS_ALWAYS = ['mes', 'anio'];
-const SKIP_FIELDS_MI_PLANILLA = ['numeroPlanilla', 'valorPagado', 'fechaPagoDia', 'fechaPagoMes', 'fechaPagoAnio'];
+const SKIP_FIELDS_MI_PLANILLA = ['numeroPlanilla', 'valorPagado', 'fechaPago'];
 
 const onDocumentNumberBlur = async () => {
   if (!formData.documentType || !formData.documentNumber) return;

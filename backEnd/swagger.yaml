@@ -97,7 +97,7 @@ paths:
                     Campos específicos según la plataforma elegida:
                     - **soi**: `{ mes, anio }`
                     - **asopagos**: `{ mes, anio, tipoCertificado }`
-                    - **mi_planilla**: `{ mes, anio, numeroPlanilla, valorPagado, fechaPagoDia, fechaPagoMes, fechaPagoAnio }`
+                    - **mi_planilla**: `{ mes, anio, numeroPlanilla, valorPagado, fechaPago }`
                     - **aportes_en_linea**: `{ mesDesde, anioDesde, mesHasta, anioHasta }`
       responses:
         "201":

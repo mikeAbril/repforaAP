@@ -22,9 +22,7 @@ const PLATFORM_FIELDS = {
             "mes",
             "anio",
             "valorPagado",
-            "fechaPagoDia",
-            "fechaPagoMes",
-            "fechaPagoAnio",
+            "fechaPago",
         ],
     },
 };

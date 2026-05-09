@@ -235,9 +235,7 @@ export const formConfigs = {
         fields: [
           { name: 'numeroPlanilla', label: 'Número de Planilla', type: 'input', isNumber: true, col: 6 },
           { name: 'valorPagado', label: 'Valor Total Pagado ($)', type: 'input', isNumber: true, col: 6 },
-          { name: 'fechaPagoDia', label: 'Día de Pago', type: 'select', options: 'dias', col: 4 },
-          { name: 'fechaPagoMes', label: 'Mes de Pago', type: 'select', options: 'mesesNombres', col: 4 },
-          { name: 'fechaPagoAnio', label: 'Año de Pago', type: 'select', options: 'anios', col: 4 }
+          { name: 'fechaPago', label: 'Fecha de Pago', type: 'date', col: 12 }
         ]
       },
 

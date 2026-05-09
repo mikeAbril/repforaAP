@@ -3,7 +3,7 @@ import MainLayout from '@/layouts/MainLayout.vue'
 import InstructorView from '@/views/InstructorView.vue'
 import LoginView from '@/views/LoginView.vue'
 import SupervisorView from '@/views/SupervisorView.vue'
-import AdminSupervisorsView from '@/views/AdminSupervisorsView.vue'
+
 import ChangePasswordView from '@/views/ChangePasswordView.vue'
 import ForgotPasswordView from '@/views/ForgotPasswordView.vue'
 import HomeView from '@/views/HomeView.vue'
@@ -44,12 +44,6 @@ const routes = [
                 path: 'supervisor',
                 name: 'Supervisor',
                 component: SupervisorView,
-                meta: { requiresAuth: true }
-            },
-            {
-                path: 'admin/supervisors',
-                name: 'AdminSupervisors',
-                component: AdminSupervisorsView,
                 meta: { requiresAuth: true }
             }
         ]

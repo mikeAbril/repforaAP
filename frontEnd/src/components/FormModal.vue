@@ -119,6 +119,31 @@
                         <span class="material-symbols-outlined" style="font-size: 20px">{{ getIcon(field.name) }}</span>
                       </template>
                     </q-input>
+
+                    <q-input
+                      v-else-if="field.type === 'date'"
+                      filled
+                      v-model="formData[field.name]"
+                      placeholder="Seleccione la fecha..."
+                      dense
+                      readonly
+                      lazy-rules
+                      :rules="[val => (val !== null && val !== undefined && val !== '') || 'El campo es requerido']"
+                    >
+                      <template v-slot:prepend>
+                        <span class="material-symbols-outlined" style="font-size: 20px">{{ getIcon(field.name) }}</span>
+                      </template>
+                      <template v-slot:append>
+                        <q-icon name="event" class="cursor-pointer" />
+                      </template>
+                      <q-popup-proxy transition-show="scale" transition-hide="scale">
+                        <q-date v-model="formData[field.name]" mask="YYYY-MM-DD">
+                          <div class="row items-center justify-end">
+                            <q-btn v-close-popup label="Cerrar" color="primary" flat />
+                          </div>
+                        </q-date>
+                      </q-popup-proxy>
+                    </q-input>
                   </div>
                 </div>
               </div>
@@ -186,9 +211,7 @@ const iconMap = {
   supervisorId: 'supervised_user_circle',
   numeroPlanilla: 'receipt_long',
   valorPagado: 'payments',
-  fechaPagoDia: 'calendar_today',
-  fechaPagoMes: 'date_range',
-  fechaPagoAnio: 'event_available',
+  fechaPago: 'calendar_today',
   fechaExpedicion: 'edit_calendar'
 };
 

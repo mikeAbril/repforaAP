@@ -14,17 +14,7 @@
           </div>
         </div>
         <div class="header-actions row q-gutter-x-md">
-          <q-btn
-            v-if="profile.role === 'admin'"
-            flat
-            class="header-btn-premium admin q-mr-md"
-            @click="router.push('/admin/supervisors')"
-          >
-            <div class="row items-center no-wrap">
-              <q-icon name="sym_o_admin_panel_settings" size="18px" class="q-mr-sm" />
-              <span>Gestión Admin</span>
-            </div>
-          </q-btn>
+
           <q-btn
             flat
             class="header-btn-premium secondary"
@@ -125,7 +115,7 @@
       </div>
 
       <!-- History Section -->
-      <section class="history-section">
+      <section class="history-section" v-if="profile.role !== 'admin'">
         <div class="history-card-premium">
           <div class="card-header row items-center justify-between q-pa-lg">
             <div class="header-info">
@@ -303,6 +293,11 @@
         </div>
       </section>
 
+      <!-- Admin Panel Section -->
+      <section class="admin-section" v-if="profile.role === 'admin'">
+        <AdminPanel />
+      </section>
+
     </div>
 
       <!-- API Key Modal -->
@@ -357,6 +352,7 @@ import { useQuasar } from 'quasar'
 import { useAuthStore } from '@/store/auth'
 import api from '@/plugins/axios'
 import * as XLSX from 'xlsx'
+import AdminPanel from '@/components/AdminPanel.vue'
 
 const $q = useQuasar()
 const router = useRouter()
@@ -449,10 +445,8 @@ const filteredTotal = computed(() => {
   return pagination.value.rowsNumber
 })
 
-// URL de la carpeta de Drive del supervisor
-const driveFolderUrl = computed(() => {
-  return 'https://drive.google.com/drive/folders/143XVr4u9HYk77Erx4Dq9uVjMm8Jjh1EW'
-})
+// URL dinámica de la carpeta de Drive del supervisor
+const driveFolderUrl = ref('https://drive.google.com/drive/folders/143XVr4u9HYk77Erx4Dq9uVjMm8Jjh1EW')
 
 const logout = () => {
   const authStore = useAuthStore()
@@ -481,6 +475,16 @@ const fetchProfile = async () => {
     const res = await api.get('/supervisors/profile')
     if (res.data.success) {
       profile.value = res.data.supervisor
+
+      // Fetch dynamic drive link
+      try {
+        const driveRes = await api.get('/supervisors/profile/drive-link')
+        if (driveRes.data.success && driveRes.data.url) {
+          driveFolderUrl.value = driveRes.data.url
+        }
+      } catch (err) {
+        console.error('Error loading drive link', err)
+      }
     }
   } catch (error) {
     console.error('Error loading profile:', error)

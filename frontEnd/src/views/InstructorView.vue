@@ -129,16 +129,15 @@
                       <q-icon :name="'sym_o_' + getIcon(field.name)" size="20px" />
                     </template>
                     <template v-slot:append>
-                      <q-icon name="sym_o_event" class="cursor-pointer">
-                        <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                          <q-date v-model="formData[field.name]" mask="YYYY-MM-DD">
-                            <div class="row items-center justify-end">
-                              <q-btn v-close-popup label="Cerrar" color="primary" flat />
-                            </div>
-                          </q-date>
-                        </q-popup-proxy>
-                      </q-icon>
+                      <q-icon name="sym_o_event" class="cursor-pointer" />
                     </template>
+                    <q-popup-proxy transition-show="scale" transition-hide="scale">
+                      <q-date v-model="formData[field.name]" mask="YYYY-MM-DD">
+                        <div class="row items-center justify-end">
+                          <q-btn v-close-popup label="Cerrar" color="primary" flat />
+                        </div>
+                      </q-date>
+                    </q-popup-proxy>
                   </q-input>
                 </div>
               </div>
@@ -215,9 +214,7 @@ const iconMap = {
   supervisorId: 'supervised_user_circle',
   numeroPlanilla: 'receipt_long',
   valorPagado: 'payments',
-  fechaPagoDia: 'calendar_today',
-  fechaPagoMes: 'date_range',
-  fechaPagoAnio: 'event_available',
+  fechaPago: 'calendar_today',
   fechaExpedicion: 'edit_calendar'
 };
 
@@ -235,9 +232,7 @@ const placeholderMap = {
   supervisorId: 'Selecciona un supervisor...',
   numeroPlanilla: 'Escribe el número de planilla...',
   valorPagado: 'Escribe el valor total pagado...',
-  fechaPagoDia: 'Selecciona el día...',
-  fechaPagoMes: 'Selecciona el mes de pago...',
-  fechaPagoAnio: 'Selecciona el año de pago...',
+  fechaPago: 'Selecciona la fecha de pago...',
   fechaExpedicion: 'Escribe la fecha de expedición...'
 };
 
@@ -272,7 +267,7 @@ const initFormData = (platformId) => {
 
 // Campos que nunca se autocompletan
 const SKIP_FIELDS_ALWAYS = ['mes', 'anio'];
-const SKIP_FIELDS_MI_PLANILLA = ['numeroPlanilla', 'valorPagado', 'fechaPagoDia', 'fechaPagoMes', 'fechaPagoAnio'];
+const SKIP_FIELDS_MI_PLANILLA = ['numeroPlanilla', 'valorPagado', 'fechaPago'];
 
 const onDocumentNumberBlur = async () => {
   if (!formData.documentType || !formData.documentNumber) return;
