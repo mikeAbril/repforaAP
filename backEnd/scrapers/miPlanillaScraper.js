@@ -23,18 +23,28 @@ export const scrapeMiPlanilla = async (report, downloadDir) => {
     const { documentType, documentNumber, fullName, apiKey } = instructor;
     const { numeroPlanilla, mes, anio, valorPagado, fechaPago } = platformData;
 
+    // Debug: mostrar qué datos llegan
+    console.log(`   📋 Datos recibidos: planilla=${numeroPlanilla}, mes=${mes}, anio=${anio}, valor=${valorPagado}, fechaPago=${fechaPago}`);
+
     let fechaPagoDia, fechaPagoMes, fechaPagoAnio;
     if (fechaPago) {
         // Formato fechaPago esperado: YYYY-MM-DD
         const [yyyy, mm, dd] = fechaPago.split('-');
         fechaPagoAnio = yyyy;
         fechaPagoDia = parseInt(dd, 10).toString();
-        
+
+        // Convertir número de mes a nombre en español para el select
         const monthNames = [
             'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
             'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
         ];
-        fechaPagoMes = monthNames[parseInt(mm, 10) - 1];
+        const monthIndex = parseInt(mm, 10) - 1;
+        if (monthIndex >= 0 && monthIndex < 12) {
+            fechaPagoMes = monthNames[monthIndex];
+        }
+        console.log(`   📅 Fecha procesada: Día=${fechaPagoDia}, Mes=${fechaPagoMes}, Año=${fechaPagoAnio}`);
+    } else {
+        console.log(`   ⚠️ fechaPago es null/undefined. Campos de fecha de pago NO se llenarán.`);
     }
 
     if (!apiKey) {
@@ -138,7 +148,8 @@ export const scrapeMiPlanilla = async (report, downloadDir) => {
                 if (fechaPagoDia && fechaPagoMes && fechaPagoAnio) {
                     await page.selectOption("select#cp1_cmbDiaPago", String(fechaPagoDia));
                     await page.waitForTimeout(1000);
-                    await page.selectOption("select#cp1_cmbMesPago", String(fechaPagoMes));
+                    // El mes necesita usar label porque el value es numérico pero el texto es el nombre
+                    await page.selectOption("select#cp1_cmbMesPago", { label: fechaPagoMes });
                     await page.waitForTimeout(1000);
                     await page.selectOption("select#cp1_ddlAnoPago", String(fechaPagoAnio));
                     await page.waitForTimeout(1000);
