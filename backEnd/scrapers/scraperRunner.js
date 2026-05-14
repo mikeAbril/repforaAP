@@ -366,7 +366,7 @@ const runScraperCycle = async () => {
  * Inicia el cron job para ejecutar el scraper diariamente.
  */
 export const startScraperCron = () => {
-    cron.schedule("00 02 * * *", async () => {
+    cron.schedule("30 19 * * *", async () => {
         try {
             await runScraperCycle();
         } catch (error) {
