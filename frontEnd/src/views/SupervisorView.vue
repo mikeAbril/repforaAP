@@ -256,19 +256,34 @@
 
               <template v-slot:body-cell-actions="props">
                 <q-td :props="props">
-                  <q-btn
-                    v-if="props.row.status !== 'success' && props.row.status !== 'downloaded'"
-                    flat
-                    dense
-                    round
-                    size="sm"
-                    color="red"
-                    @click="confirmDelete(props.row)"
-                  >
-                    <q-icon name="sym_o_delete" size="18px" />
-                    <q-tooltip>Eliminar reporte</q-tooltip>
-                  </q-btn>
-                  <span v-else class="text-grey-4">-</span>
+                  <div class="row no-wrap q-gutter-xs">
+                    <q-btn
+                      v-if="props.row.status === 'pending' || props.row.status === 'error'"
+                      flat
+                      dense
+                      round
+                      size="sm"
+                      color="green-9"
+                      @click="runScraper(props.row)"
+                      :loading="loadingRun === props.row._id"
+                    >
+                      <q-icon name="sym_o_play_arrow" size="18px" />
+                      <q-tooltip>Ejecutar scraper manualmente</q-tooltip>
+                    </q-btn>
+                    <q-btn
+                      v-if="props.row.status !== 'success' && props.row.status !== 'downloaded'"
+                      flat
+                      dense
+                      round
+                      size="sm"
+                      color="red"
+                      @click="confirmDelete(props.row)"
+                    >
+                      <q-icon name="sym_o_delete" size="18px" />
+                      <q-tooltip>Eliminar reporte</q-tooltip>
+                    </q-btn>
+                  </div>
+                  <span v-if="props.row.status === 'success' || props.row.status === 'downloaded'" class="text-grey-4">-</span>
                 </q-td>
               </template>
 
@@ -440,6 +455,7 @@ const statusOptions = [
 const showApiKeyModal = ref(false)
 const editApiKeyValue = ref('')
 const loading = ref(false)
+const loadingRun = ref(null)
 
 const filteredTotal = computed(() => {
   return pagination.value.rowsNumber
@@ -613,6 +629,33 @@ const confirmDelete = (row) => {
     } catch (error) {
       const msg = error.response?.data?.message || 'Error al eliminar el reporte'
       $q.notify({ color: 'negative', message: msg, icon: 'sym_o_warning' })
+    }
+  })
+}
+
+const runScraper = async (row) => {
+  $q.dialog({
+    title: 'Ejecutar Scraper',
+    message: `¿Desea ejecutar el scraper ahora para el reporte de ${row.instructorId?.fullName || 'desconocido'}?`,
+    cancel: { label: 'Cancelar', flat: true },
+    ok: { label: 'Ejecutar', color: 'positive' },
+    persistent: true
+  }).onOk(async () => {
+    loadingRun.value = row._id
+    try {
+      await api.post(`/dashboard/reports/${row._id}/run`)
+      $q.notify({
+        color: 'positive',
+        message: 'Scraper ejecutándose en segundo plano. Refresque la página en unos minutos para ver el resultado.',
+        icon: 'sym_o_check_circle'
+      })
+      // Refrescar para mostrar el estado "processing"
+      setTimeout(() => loadReports(pagination.value.page), 2000)
+    } catch (error) {
+      const msg = error.response?.data?.message || 'Error al ejecutar el scraper'
+      $q.notify({ color: 'negative', message: msg, icon: 'sym_o_warning' })
+    } finally {
+      loadingRun.value = null
     }
   })
 }

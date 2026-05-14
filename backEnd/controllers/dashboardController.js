@@ -1,5 +1,20 @@
 import Report from "../models/Report.js";
 import Instructor from "../models/Instructor.js";
+import Supervisor from "../models/Supervisor.js";
+import { scrapeSoi } from "../scrapers/soiScraper.js";
+import { scrapeAportesEnLinea } from "../scrapers/aportesEnLineaScraper.js";
+import { scrapeAsopagos } from "../scrapers/asopagosScraper.js";
+import { scrapeMiPlanilla } from "../scrapers/miPlanillaScraper.js";
+import { uploadToDrive } from "../services/driveService.js";
+import { decrypt } from "../utils/crypto.js";
+import path from "path";
+
+const SCRAPER_MAP = {
+    soi: scrapeSoi,
+    aportes_en_linea: scrapeAportesEnLinea,
+    asopagos: scrapeAsopagos,
+    mi_planilla: scrapeMiPlanilla,
+};
 
 /**
  * GET /api/dashboard/reports
@@ -157,5 +172,131 @@ export const getStats = async (req, res, next) => {
         });
     } catch (error) {
         next(error);
+    }
+};
+
+/**
+ * POST /api/dashboard/reports/:id/run
+ * Ejecuta manualmente el scraper para un reporte específico.
+ * Solo para reportes en estado "pending" o "error".
+ * Requiere authMiddleware.
+ */
+export const runReport = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+
+        const report = await Report.findById(id);
+        if (!report) {
+            return res.status(404).json({ success: false, message: "Reporte no encontrado" });
+        }
+
+        if (report.supervisorId.toString() !== req.supervisor.id) {
+            return res.status(403).json({ success: false, message: "Sin permisos para ejecutar este reporte" });
+        }
+
+        if (report.status === "processing") {
+            return res.status(400).json({ success: false, message: "El reporte ya está siendo procesado" });
+        }
+
+        if (report.status === "success" || report.status === "downloaded") {
+            return res.status(400).json({ success: false, message: "El reporte ya está completado" });
+        }
+
+        const scraperFn = SCRAPER_MAP[report.platform];
+        if (!scraperFn) {
+            return res.status(400).json({ success: false, message: "No hay scraper implementado para esta plataforma" });
+        }
+
+        // Marcar como processing
+        report.status = "processing";
+        report.attempts = (report.attempts || 0) + 1;
+        await report.save();
+
+        // Ejecutar scraper de forma asíncrona (no bloquear la respuesta)
+        executeScraperAsync(report, scraperFn);
+
+        res.json({
+            success: true,
+            message: "Ejecutando scraper en segundo plano. Consulte el estado en unos minutos.",
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * Función auxiliar para ejecutar el scraper de forma asíncrona
+ */
+const executeScraperAsync = async (report, scraperFn) => {
+    const DOWNLOADS_DIR = path.join(process.cwd(), "downloads");
+
+    try {
+        const instructor = await Instructor.findById(report.instructorId);
+        if (!instructor) {
+            report.status = "error";
+            report.errorReason = "Instructor no encontrado";
+            await report.save();
+            return;
+        }
+
+        let decryptedApiKey = null;
+        if (report.supervisorId) {
+            const supervisor = await Supervisor.findById(report.supervisorId);
+            if (supervisor && supervisor.apiKey) {
+                decryptedApiKey = decrypt(supervisor.apiKey);
+            }
+        }
+
+        const reportData = {
+            instructor: {
+                documentType: instructor.documentType,
+                documentNumber: instructor.documentNumber,
+                eps: report.eps,
+                fullName: instructor.fullName,
+                email: instructor.email,
+                documentIssueDate: instructor.documentIssueDate,
+                apiKey: decryptedApiKey,
+            },
+            platformData: report.platformData,
+        };
+
+        const result = await scraperFn(reportData, DOWNLOADS_DIR);
+
+        if (result.success) {
+            report.status = "success";
+            report.filePath = result.filePath;
+            report.errorReason = null;
+
+            // Subir a Drive
+            try {
+                const paymentMonth = (report.reportMonth % 12) + 1;
+                const paymentYear = paymentMonth === 1 ? report.reportYear + 1 : report.reportYear;
+
+                const driveResult = await uploadToDrive(
+                    result.filePath,
+                    instructor.fullName,
+                    paymentYear,
+                    paymentMonth,
+                    instructor.documentType,
+                    instructor.documentNumber,
+                    null
+                );
+
+                report.driveFileId = driveResult.driveFileId;
+                report.driveUrl = driveResult.driveUrl;
+                report.status = "downloaded";
+            } catch (driveError) {
+                console.error(`Drive falló para ${report._id}: ${driveError.message}`);
+            }
+        } else {
+            report.status = "error";
+            report.errorReason = result.error || "Error desconocido en el scraper";
+        }
+
+        await report.save();
+    } catch (error) {
+        report.status = "error";
+        report.errorReason = `Error: ${error.message}`;
+        await report.save();
     }
 };
