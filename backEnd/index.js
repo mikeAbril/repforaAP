@@ -1,4 +1,5 @@
 import dotenv from "dotenv";
+import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 
@@ -35,6 +36,12 @@ app.use(
 app.use(morgan("dev"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// --- Servir archivos estáticos del frontend ---
+const publicPath = path.join(__dirname, "../public");
+if (fs.existsSync(publicPath)) {
+  app.use(express.static(publicPath));
+}
 
 // --- Rutas ---
 import authRoutes from "./routes/authRoutes.js";
