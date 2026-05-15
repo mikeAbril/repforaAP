@@ -26,39 +26,35 @@ VITE_API_URL=https://tu-dominio.com/api
 
 #### Variables de Google Drive (OBLIGATORIAS para subir archivos)
 
-Opción 1: Usar carpeta "PLANILLAS" automática (MÁS FÁCIL):
-```
-# Contenido del archivo JSON de Service Account en UNA SOLA LÍNEA
-GOOGLE_SERVICE_ACCOUNT_CREDENTIALS={"type":"service_account","project_id":"...","private_key_id":"...","private_key":"...","client_email":"...","client_id":"...","auth_uri":"...","token_uri":"...","auth_provider_x509_cert_url":"...","client_x509_cert_url":"..."}
-```
+El sistema utiliza **OAuth2** con cuentas personales o de Workspace. No uses Service Accounts.
 
-Opción 2: Usar una carpeta específica:
 ```
-# Service Account credentials
-GOOGLE_SERVICE_ACCOUNT_CREDENTIALS={"type":"service_account",...}
+# Credenciales del cliente OAuth2 (OBLIGATORIAS)
+GOOGLE_OAUTH_CLIENT_ID=tu_client_id_de_google_cloud
+GOOGLE_OAUTH_CLIENT_SECRET=tu_client_secret_de_google_cloud
 
-# ID de la carpeta específica (DEBES compartirla con el email del Service Account)
+# ID de la carpeta raíz específica (OPCIONAL)
+# Si no lo pones, se crearán en la raíz ("Mi unidad") de quien inicie sesión
 GOOGLE_DRIVE_FOLDER_ID=1AbCdEfGhIjKlMnOpQrStUvWxYz
 ```
 
-**IMPORTANTE: Para configurar Google Drive Service Account:**
+**IMPORTANTE: Para configurar Google Drive OAuth2:**
 
 1. Ve a [Google Cloud Console](https://console.cloud.google.com)
 2. Crea o selecciona un proyecto
 3. Habilita la API de Google Drive:
    - APIs y Servicios → Biblioteca → Buscar "Google Drive API" → Habilitar
-4. Crea una cuenta de servicio:
-   - APIs y Servicios → Credenciales → Crear credenciales → Cuenta de servicio
-   - Nombre: algo descriptivo (ej: "Certificados Drive")
-   - Guarda el archivo JSON descargado
-5. Convierte el JSON a una sola línea:
-   - Linux/Mac: `cat archivo.json | jq -c .`
-   - Windows: `(Get-Content archivo.json -Raw | ConvertFrom-Json | ConvertTo-Json -Compress)`
-   - Online: https://www.minifier.org/
-6. Pega el resultado en `GOOGLE_SERVICE_ACCOUNT_CREDENTIALS`
-7. Comparte la carpeta de Drive con el email del Service Account:
-   - Abre el archivo JSON y copia el valor de `client_email`
-   - Ve a la carpeta en Drive → Compartir → Pega el email → Editor
+4. Configura la Pantalla de Consentimiento OAuth:
+   - Tipo de usuario: Externo (o Interno si usas Workspace)
+   - Agrega los dominios autorizados y tu correo
+   - Agrega el scope: `.../auth/drive.file`
+5. Crea credenciales OAuth2:
+   - APIs y Servicios → Credenciales → Crear credenciales → ID de cliente de OAuth
+   - Tipo de aplicación: Aplicación web
+   - Orígenes de JavaScript autorizados: `https://tu-dominio.com`
+   - URI de redireccionamiento autorizados: `https://tu-dominio.com/api/drive/auth/callback`
+6. Copia el **ID de cliente** y el **Secreto de cliente** en las variables correspondientes en Coolify.
+7. Una vez desplegado, el **Admin** debe entrar a la app, ir a **Configuración → Google Drive** y autorizar el acceso.
 
 #### Variables Opcionales (según funcionalidades)
 ```

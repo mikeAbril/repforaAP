@@ -59,6 +59,7 @@ export const scrapeMiPlanilla = async (report, downloadDir) => {
 
         browser = await chromium.launch({
             headless: process.env.HEADLESS !== "false",
+            executablePath: process.env.CHROMIUM_PATH || undefined,
             args: ["--disable-popup-blocking", "--disable-extensions"],
         });
 
