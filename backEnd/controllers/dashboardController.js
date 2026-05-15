@@ -1,3 +1,18 @@
+/**
+ * dashboardController.js — API del panel de supervisores
+ *
+ * Endpoints:
+ *  GET  /api/dashboard/reports     → Lista reportes del supervisor con filtros y paginación
+ *  GET  /api/dashboard/stats       → Estadísticas de reportes (pending, processing, success, error)
+ *  POST /api/dashboard/reports/:id/run  → Ejecuta manualmente el scraper para un reporte
+ *  DELETE /api/dashboard/reports/:id    → Elimina un reporte no completado
+ *
+ * El endpoint "run" ejecuta el scraper de forma asíncrona (no bloquea la respuesta).
+ * Después de subir a Drive, actualiza automáticamente el driveFolderUrl del supervisor.
+ *
+ * Todos los endpoints requieren JWT (authMiddleware).
+ * Cada supervisor solo ve/ejecuta SUS propios reportes (filtrado por supervisorId).
+ */
 import Report from "../models/Report.js";
 import Instructor from "../models/Instructor.js";
 import Supervisor from "../models/Supervisor.js";
@@ -240,11 +255,20 @@ const executeScraperAsync = async (report, scraperFn) => {
         }
 
         let decryptedApiKey = null;
+        let supervisorName = null;
         if (report.supervisorId) {
             const supervisor = await Supervisor.findById(report.supervisorId);
-            if (supervisor && supervisor.apiKey) {
-                decryptedApiKey = decrypt(supervisor.apiKey);
+            if (supervisor) {
+                supervisorName = supervisor.name;
+                console.log(`   👤 Supervisor encontrado: ${supervisorName}`);
+                if (supervisor.apiKey) {
+                    decryptedApiKey = decrypt(supervisor.apiKey);
+                }
+            } else {
+                console.log(`   ⚠️  Supervisor con ID ${report.supervisorId} no encontrado en DB`);
             }
+        } else {
+            console.log(`   ⚠️  El reporte no tiene supervisorId asignado`);
         }
 
         const reportData = {
@@ -279,12 +303,19 @@ const executeScraperAsync = async (report, scraperFn) => {
                     paymentMonth,
                     instructor.documentType,
                     instructor.documentNumber,
-                    null
+                    supervisorName
                 );
 
                 report.driveFileId = driveResult.driveFileId;
                 report.driveUrl = driveResult.driveUrl;
                 report.status = "downloaded";
+
+                // Actualizar el link de la carpeta del supervisor en Drive
+                if (driveResult.supervisorFolderId && report.supervisorId) {
+                    const newFolderUrl = `https://drive.google.com/drive/folders/${driveResult.supervisorFolderId}`;
+                    await Supervisor.findByIdAndUpdate(report.supervisorId, { driveFolderUrl: newFolderUrl });
+                    console.log(`   📂 Carpeta del supervisor actualizada: ${newFolderUrl}`);
+                }
             } catch (driveError) {
                 console.error(`Drive falló para ${report._id}: ${driveError.message}`);
             }

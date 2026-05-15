@@ -1,6 +1,4 @@
 import crypto from "crypto";
-import dotenv from "dotenv";
-dotenv.config();
 
 const ALGORITHM = "aes-256-cbc";
 // La clave secreta debe tener 32 caracteres. Si no existe en el env, usamos una por defecto (no recomendado en prod)

@@ -2,54 +2,85 @@
   <div class="admin-panel">
     <div class="row items-center justify-between q-mb-md">
       <div class="header-info">
-        <h3 class="card-title text-h5 text-weight-bold q-ma-none text-dark">Gestión de Usuarios</h3>
-        <p class="card-subtitle text-grey-7 q-mt-xs q-mb-none">Administración total de cuentas y permisos</p>
+        <h3 class="card-title text-h5 text-weight-bold q-ma-none text-dark">Panel de Administración</h3>
+        <p class="card-subtitle text-grey-7 q-mt-xs q-mb-none">Gestión de usuarios y configuración del sistema</p>
       </div>
-      <q-btn
-        class="bg-green-9 text-white add-btn-premium"
-        unelevated
-        @click="openCreateDialog"
-      >
-        <q-icon name="sym_o_add" class="q-mr-sm" size="20px" />
-        Nuevo Usuario
-      </q-btn>
     </div>
 
-    <q-card class="table-card-premium">
-      <div class="q-pa-md">
-        <q-table
-          flat
-          bordered
-          :rows="supervisors"
-          :columns="columns"
-          row-key="_id"
-          :loading="loading"
-          no-data-label="Sin registros aún"
-          class="premium-table"
-        >
-          <template v-slot:body-cell-actions="props">
-            <q-td :props="props">
-              <q-btn round size="xs" color="green-10" icon="sym_o_edit" class="q-mr-sm" @click="editSupervisor(props.row)">
-                <q-tooltip>Editar</q-tooltip>
-              </q-btn>
-              <q-btn round size="xs" color="negative" icon="sym_o_delete" @click="confirmDelete(props.row)">
-                <q-tooltip>Eliminar</q-tooltip>
-              </q-btn>
-            </q-td>
-          </template>
+    <!-- Tabs para navegar entre secciones -->
+    <q-card class="tabs-card-premium q-mb-md">
+      <q-tabs
+        v-model="activeTab"
+        dense
+        class="text-grey-7"
+        active-color="var(--color_button)"
+        indicator-color="var(--color_button)"
+        align="left"
+        no-caps
+      >
+        <q-tab name="users" icon="sym_o_people" label="Usuarios" />
+        <q-tab name="drive" icon="sym_o_cloud" label="Google Drive" />
+      </q-tabs>
 
-          <template v-slot:body-cell-role="props">
-            <q-td :props="props">
-              <q-badge v-if="props.row.role === 'admin'" class="bg-green-10">
-                {{ props.row.role.toUpperCase() }}
-              </q-badge>
-              <q-badge v-else class="bg-grey-6">
-                {{ props.row.role.toUpperCase() }}
-              </q-badge>
-            </q-td>
-          </template>
-        </q-table>
-      </div>
+      <q-separator />
+
+      <q-tab-panels v-model="activeTab" animated>
+        <!-- Tab de Usuarios -->
+        <q-tab-panel name="users" class="q-pa-none">
+          <div class="q-pa-md">
+            <div class="row items-center justify-between q-mb-md">
+              <span class="text-subtitle1 text-weight-medium">Lista de Usuarios</span>
+              <q-btn
+                class="bg-green-9 text-white"
+                unelevated
+                @click="openCreateDialog"
+                size="sm"
+              >
+                <q-icon name="sym_o_add" class="q-mr-sm" size="16px" />
+                Nuevo Usuario
+              </q-btn>
+            </div>
+
+            <q-table
+              flat
+              bordered
+              :rows="supervisors"
+              :columns="columns"
+              row-key="_id"
+              :loading="loading"
+              no-data-label="Sin registros aún"
+              class="premium-table"
+            >
+              <template v-slot:body-cell-actions="props">
+                <q-td :props="props">
+                  <q-btn round size="xs" color="green-10" icon="sym_o_edit" class="q-mr-sm" @click="editSupervisor(props.row)">
+                    <q-tooltip>Editar</q-tooltip>
+                  </q-btn>
+                  <q-btn round size="xs" color="negative" icon="sym_o_delete" @click="confirmDelete(props.row)">
+                    <q-tooltip>Eliminar</q-tooltip>
+                  </q-btn>
+                </q-td>
+              </template>
+
+              <template v-slot:body-cell-role="props">
+                <q-td :props="props">
+                  <q-badge v-if="props.row.role === 'admin'" class="bg-green-10">
+                    {{ props.row.role.toUpperCase() }}
+                  </q-badge>
+                  <q-badge v-else class="bg-grey-6">
+                    {{ props.row.role.toUpperCase() }}
+                  </q-badge>
+                </q-td>
+              </template>
+            </q-table>
+          </div>
+        </q-tab-panel>
+
+        <!-- Tab de Google Drive -->
+        <q-tab-panel name="drive" class="q-pa-none">
+          <DriveAuthPanel />
+        </q-tab-panel>
+      </q-tab-panels>
     </q-card>
 
     <!-- Dialog for Create/Edit -->
@@ -202,8 +233,10 @@
 import { ref, onMounted } from 'vue'
 import { useQuasar } from 'quasar'
 import api from '@/plugins/axios'
+import DriveAuthPanel from './DriveAuthPanel.vue'
 
 const $q = useQuasar()
+const activeTab = ref('users')
 const supervisors = ref([])
 const loading = ref(false)
 const saving = ref(false)
@@ -291,7 +324,7 @@ const saveSupervisor = async () => {
   saving.value = true
   try {
     const payload = { ...formData.value }
-    
+
     let res
     if (isEditing.value) {
       res = await api.put(`/supervisors/admin/${currentId.value}`, payload)
@@ -337,6 +370,12 @@ onMounted(loadSupervisors)
 </script>
 
 <style scoped>
+.tabs-card-premium {
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+}
+
 .table-card-premium {
   border-radius: var(--radius);
   border: 1px solid var(--border);
@@ -419,5 +458,9 @@ onMounted(loadSupervisors)
   border-radius: var(--radius);
   padding: 0.6rem 1.5rem;
   font-weight: 700;
+}
+
+:deep(.q-tab-panel) {
+  padding: 0;
 }
 </style>

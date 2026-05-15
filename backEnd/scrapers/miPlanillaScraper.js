@@ -3,9 +3,7 @@ import path from "path";
 import fs from "fs";
 import { randomDelay, humanType, humanClick } from "../helpers/humanBehavior.js";
 import { Solver } from '@2captcha/captcha-solver';
-import dotenv from 'dotenv';
 
-dotenv.config();
 
 const MI_PLANILLA_FORM_URL = "https://www.miplanilla.com/Private/Consultaplanillaindependiente.aspx";
 

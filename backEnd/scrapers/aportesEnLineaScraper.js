@@ -1,11 +1,9 @@
 import { chromium } from "playwright";
 import path from "path";
 import fs from "fs";
-import { randomDelay, humanType, humanClick, humanSelect } from "../helpers/humanBehavior.js";
+import { randomDelay, humanType, humanClick } from "../helpers/humanBehavior.js";
 import { Solver } from '@2captcha/captcha-solver';
-import dotenv from 'dotenv';
 
-dotenv.config();
 
 const APORTES_FORM_URL = "https://empresas.aportesenlinea.com/Autoservicio/CertificadoAportes.aspx";
 const SITE_KEY = "6Lc6FDMUAAAAAKwQX0_xF92Z1MiUXm4sYbQ6bh6J";

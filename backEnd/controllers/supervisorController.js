@@ -1,7 +1,25 @@
+/**
+ * supervisorController.js — Gestión de supervisores
+ *
+ * Endpoints públicos:
+ *  GET /api/supervisors/list → Lista supervisores (solo nombre e ID) para el formulario
+ *
+ * Endpoints protegidos (cualquier supervisor autenticado):
+ *  GET  /api/supervisors/profile          → Perfil completo del supervisor
+ *  GET  /api/supervisors/profile/apikey   → API Key desencriptada de 2Captcha
+ *  GET  /api/supervisors/profile/drive-link → Link de la carpeta de Drive del supervisor
+ *  PUT  /api/supervisors/profile          → Actualizar apiKey (valida contra 2Captcha)
+ *
+ * Endpoints de admin (solo rol "admin"):
+ *  GET    /api/supervisors/admin/all  → Lista todos los supervisores
+ *  POST   /api/supervisors/admin      → Crear supervisor (contraseña = documentNumber)
+ *  PUT    /api/supervisors/admin/:id  → Editar supervisor
+ *  DELETE /api/supervisors/admin/:id  → Eliminar supervisor
+ */
 import Supervisor from "../models/Supervisor.js";
 import bcrypt from "bcryptjs";
 import { encrypt, decrypt } from "../utils/crypto.js";
-import { getDriveClient, validateAndGetRootId } from "../services/driveService.js";
+import { getDriveClient, getRootFolderId } from "../services/driveService.js";
 
 /**
  * GET /api/supervisors/list
@@ -233,8 +251,8 @@ export const getDriveLink = async (req, res, next) => {
             return res.json({ success: true, url: supervisor.driveFolderUrl });
         }
 
-        const drive = getDriveClient();
-        const activeRootId = await validateAndGetRootId(drive);
+        const drive = await getDriveClient();
+        const activeRootId = await getRootFolderId(drive);
 
         // Si es admin, devolver la raíz de todos los supervisores
         if (supervisor.role === "admin") {
