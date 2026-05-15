@@ -3,9 +3,7 @@ import path from "path";
 import fs from "fs";
 import { randomDelay, humanType, humanClick, humanSelect } from "../helpers/humanBehavior.js";
 import { Solver } from '@2captcha/captcha-solver';
-import dotenv from 'dotenv';
 
-dotenv.config();
 
 const ASOPAGOS_FORM_URL = "https://www.enlace-apb.com/interssi/descargarCertificacionPago.jsp";
 
@@ -52,6 +50,7 @@ export const scrapeAsopagos = async (report, downloadDir) => {
 
         browser = await chromium.launch({
             headless: process.env.HEADLESS !== "false",
+            executablePath: process.env.CHROMIUM_PATH || undefined,
             args: [
                 "--disable-popup-blocking",
                 "--disable-extensions",

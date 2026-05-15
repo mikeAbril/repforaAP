@@ -1,163 +1,195 @@
+/**
+ * driveService.js — Servicio de Google Drive (OAuth2)
+ *
+ * Maneja la autenticación con Google Drive via OAuth2 y la subida de archivos
+ * siguiendo la estructura: PLANILLAS / [SUPERVISOR] / [AÑO] / [MES] / archivo.pdf
+ *
+ * Funciones exportadas:
+ *  - getDriveClient()  → Retorna cliente autenticado de Google Drive
+ *  - getRootFolderId()  → Obtiene el ID de la carpeta raíz configurada
+ *  - uploadToDrive()    → Sube un archivo PDF a la estructura de carpetas
+ *
+ * Los tokens OAuth2 se guardan en la colección DriveCredentials de MongoDB.
+ * El access_token se renueva automáticamente cuando expira.
+ */
 import { google } from "googleapis";
 import fs from "fs";
 import path from "path";
+import DriveCredentials from "../models/DriveCredentials.js";
 import { fileURLToPath } from "url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const ROOT_FOLDER_ID = process.env.GOOGLE_DRIVE_FOLDER_ID;
-
-if (!ROOT_FOLDER_ID) {
-    console.error("⚠️  GOOGLE_DRIVE_FOLDER_ID no está definido en el .env");
-}
-
-/**
- * Crea un cliente autenticado de Google Drive vía OAuth2.
- * 
- * Requiere 2 variables en el .env:
- *   - GOOGLE_OAUTH_CLIENT_ID     → ID del cliente OAuth2
- *   - GOOGLE_OAUTH_CLIENT_SECRET → Secreto del cliente OAuth2
- *   - GOOGLE_OAUTH_REFRESH_TOKEN → Token de actualización (se genera con setupDriveAuth.js)
- *
- * El access_token se renueva automáticamente usando el refresh_token.
- * Una vez que la app esté publicada en Google Cloud, el refresh_token NO expira.
- * 
- * @returns {import('googleapis').drive_v3.Drive}
- */
-export const getDriveClient = () => {
+const refreshAccessToken = async (refreshToken) => {
     const clientId = process.env.GOOGLE_OAUTH_CLIENT_ID;
     const clientSecret = process.env.GOOGLE_OAUTH_CLIENT_SECRET;
-    const refreshToken = process.env.GOOGLE_OAUTH_REFRESH_TOKEN;
+
+    const response = await fetch("https://oauth2.googleapis.com/token", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+            refresh_token: refreshToken,
+            client_id: clientId,
+            client_secret: clientSecret,
+            grant_type: "refresh_token",
+        }),
+    });
+
+    if (!response.ok) {
+        const errorData = await response.text();
+        console.error("Error refreshing access token:", errorData);
+        throw new Error("No se pudo renovar el access token.");
+    }
+
+    return await response.json();
+};
+
+const getStoredCredentials = async () => {
+    const credentials = await DriveCredentials.findOne().sort({ updatedAt: -1 });
+
+    if (!credentials) {
+        throw new Error("No hay credenciales de Google Drive guardadas.");
+    }
+
+    const now = new Date();
+    if (now > credentials.expiryDate) {
+        try {
+            const newTokens = await refreshAccessToken(credentials.refreshToken);
+            const expiryDate = new Date(Date.now() + (newTokens.expires_in * 1000));
+
+            credentials.accessToken = newTokens.access_token;
+            credentials.expiryDate = expiryDate;
+            await credentials.save();
+
+            console.log("✅ Access token renovado");
+
+            return {
+                accessToken: newTokens.access_token,
+                refreshToken: credentials.refreshToken
+            };
+        } catch (error) {
+            throw new Error("No se pudo renovar el access token. Re-autoriza.");
+        }
+    }
+
+    return {
+        accessToken: credentials.accessToken,
+        refreshToken: credentials.refreshToken
+    };
+};
+
+export const getDriveClient = async () => {
+    const clientId = process.env.GOOGLE_OAUTH_CLIENT_ID;
+    const clientSecret = process.env.GOOGLE_OAUTH_CLIENT_SECRET;
 
     if (!clientId || !clientSecret) {
-        throw new Error(
-            "Faltan GOOGLE_OAUTH_CLIENT_ID y/o GOOGLE_OAUTH_CLIENT_SECRET en el .env.\n" +
-            "Obtenlos en: Google Cloud Console → APIs y Servicios → Credenciales → ID de cliente OAuth 2.0"
-        );
+        throw new Error("Faltan GOOGLE_OAUTH_CLIENT_ID y/o GOOGLE_OAUTH_CLIENT_SECRET en el .env");
     }
 
-    if (!refreshToken) {
-        throw new Error(
-            "Falta GOOGLE_OAUTH_REFRESH_TOKEN en el .env.\n" +
-            "Genera uno ejecutando: node utils/setupDriveAuth.js"
-        );
-    }
+    const { accessToken, refreshToken } = await getStoredCredentials();
 
-    const oAuth2Client = new google.auth.OAuth2(clientId, clientSecret, "http://localhost");
+    const oAuth2Client = new google.auth.OAuth2(
+        clientId,
+        clientSecret,
+        "http://localhost:3000/api/drive/auth/callback"
+    );
 
-    // Configurar el refresh token — Google renueva el access_token automáticamente
-    oAuth2Client.setCredentials({ refresh_token: refreshToken });
+    oAuth2Client.credentials = {
+        access_token: accessToken,
+        refresh_token: refreshToken,
+        token_type: "Bearer",
+        expiry_date: new Date(Date.now() + 3600000).getTime()
+    };
 
     return google.drive({ version: "v3", auth: oAuth2Client });
 };
 
-/**
- * Actualiza el archivo .env con un nuevo valor para una variable específica.
- */
-const updateEnvFile = (key, value) => {
+const getOrCreatePlanillasFolder = async (drive, rootFolderId) => {
     try {
-        const envPath = path.join(__dirname, "../.env");
-        let envContent = fs.readFileSync(envPath, "utf-8");
-        const regex = new RegExp(`^${key}=.*`, "m");
+        const response = await drive.files.list({
+            q: `name='PLANILLAS' and '${rootFolderId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`,
+            fields: "files(id, name)",
+            supportsAllDrives: true,
+            includeItemsFromAllDrives: true,
+        });
 
-        if (regex.test(envContent)) {
-            envContent = envContent.replace(regex, `${key}=${value}`);
-        } else {
-            envContent += `\n${key}=${value}`;
+        if (response.data.files.length > 0) {
+            console.log(`   📁 PLANILLAS encontrada`);
+            return response.data.files[0].id;
         }
 
-        fs.writeFileSync(envPath, envContent);
-        process.env[key] = value; // Actualizar en memoria también
-        console.log(`   📝 .env actualizado: ${key}=${value}`);
-    } catch (error) {
-        console.error("   ⚠️ No se pudo actualizar el archivo .env:", error.message);
-    }
-};
-
-/**
- * Verifica si la carpeta raíz es válida. Si no, crea una nueva y actualiza el .env.
- */
-export const validateAndGetRootId = async (drive) => {
-    let rootId = process.env.GOOGLE_DRIVE_FOLDER_ID;
-
-    // Si no hay ID o si el ID actual no existe (404), creamos uno nuevo
-    let needNewRoot = !rootId;
-
-    if (rootId) {
-        try {
-            await drive.files.get({ fileId: rootId, fields: "id", supportsAllDrives: true });
-        } catch (error) {
-            if (error.code === 404 || (error.response && error.response.status === 404)) {
-                console.log(`   ⚠️ La Carpeta Raíz (${rootId}) fue eliminada de Drive.`);
-            } else {
-                console.log(`   ⚠️ No se pudo acceder a la Carpeta Raíz (${rootId}):`, error.message);
-            }
-            needNewRoot = true;
-        }
-    }
-
-    if (needNewRoot) {
-        console.log("   🏗️  Creando nueva Carpeta Raíz Corporativa...");
-        const res = await drive.files.create({
+        console.log(`   🏗️  Creando PLANILLAS...`);
+        const folder = await drive.files.create({
             requestBody: {
-                name: "SISTEMA_AUTOMATIZACION_CERTIFICADOS",
+                name: "PLANILLAS",
                 mimeType: "application/vnd.google-apps.folder",
+                parents: [rootFolderId],
             },
             fields: "id",
+            supportsAllDrives: true,
         });
-        rootId = res.data.id;
-        updateEnvFile("GOOGLE_DRIVE_FOLDER_ID", rootId);
-        console.log(`   ✅ Nueva Raíz creada: ${rootId}`);
-    }
 
-    return rootId;
+        console.log(`   ✅ PLANILLAS creada`);
+        return folder.data.id;
+    } catch (error) {
+        console.error("   ❌ Error PLANILLAS:", error.message);
+        throw error;
+    }
 };
 
-/**
- * Busca una carpeta por nombre dentro de un padre.
- * Si no existe, la crea.
- *
- * @param {import('googleapis').drive_v3.Drive} drive
- * @param {string} folderName - Nombre de la carpeta
- * @param {string} parentId - ID de la carpeta padre
- * @returns {Promise<string>} ID de la carpeta
- */
+export const getRootFolderId = async (drive) => {
+    const providedFolderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
+
+    if (providedFolderId) {
+        try {
+            await drive.files.get({
+                fileId: providedFolderId,
+                fields: "id",
+                supportsAllDrives: true,
+            });
+            console.log(`   ✅ Raíz: ${providedFolderId}`);
+            return providedFolderId;
+        } catch (error) {
+            console.log(`   ⚠️  Carpeta inválida, usando root`);
+        }
+    }
+
+    return "root";
+};
+
 const findOrCreateFolder = async (drive, folderName, parentId) => {
-    // Buscar si existe
-    const response = await drive.files.list({
-        q: `name='${folderName}' and '${parentId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`,
-        fields: "files(id, name)",
-        supportsAllDrives: true,
-        includeItemsFromAllDrives: true,
-    });
+    try {
+        const response = await drive.files.list({
+            q: `name='${folderName}' and '${parentId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`,
+            fields: "files(id, name)",
+            supportsAllDrives: true,
+            includeItemsFromAllDrives: true,
+        });
 
-    if (response.data.files.length > 0) {
-        return response.data.files[0].id;
+        if (response.data.files.length > 0) {
+            console.log(`   ✅ ${folderName} (existente)`);
+            return response.data.files[0].id;
+        }
+
+        const folder = await drive.files.create({
+            requestBody: {
+                name: folderName,
+                mimeType: "application/vnd.google-apps.folder",
+                parents: [parentId],
+            },
+            fields: "id",
+            supportsAllDrives: true,
+        });
+
+        console.log(`   ✅ ${folderName} (creada)`);
+        return folder.data.id;
+    } catch (error) {
+        console.error(`   ❌ Error ${folderName}:`, error.message);
+        throw error;
     }
-
-    // Crear carpeta
-    const folder = await drive.files.create({
-        requestBody: {
-            name: folderName,
-            mimeType: "application/vnd.google-apps.folder",
-            parents: [parentId],
-        },
-        fields: "id",
-        supportsAllDrives: true,
-    });
-
-    console.log(`   📁 Carpeta "${folderName}" creada en Drive`);
-    return folder.data.id;
 };
 
-/**
- * Genera el nombre del archivo para Drive: nombre_apellido.pdf
- * Ejemplo: "Yurley Tatiana Bernal Porras" → "bernal_porras_yurley_tatiana.pdf"
- *
- * @param {string} fullName - Nombre completo del contratista
- * @returns {string} Nombre formateado
- */
 const formatFileName = (fullName, documentType, documentNumber) => {
     if (!fullName) {
         return `${documentType}_${documentNumber}.pdf`.toLowerCase();
@@ -165,7 +197,6 @@ const formatFileName = (fullName, documentType, documentNumber) => {
     const parts = fullName.trim().toLowerCase().split(/\s+/);
 
     if (parts.length >= 4) {
-        // Asume: nombre1 nombre2 apellido1 apellido2
         const [n1, n2, a1, a2] = parts;
         return `${a1}_${a2}_${n1}_${n2}.pdf`;
     } else if (parts.length === 3) {
@@ -179,50 +210,63 @@ const formatFileName = (fullName, documentType, documentNumber) => {
     return `${parts.join("_")}.pdf`;
 };
 
-
-/**
- * Crea la jerarquía de carpetas para un supervisor.
- * Estructura: ROOT -> [NOMBRE SUPERVISOR] -> CERTIFICADOS DE PLANILLA
- *
- * @param {string} supervisorName - Nombre del supervisor
- * @returns {Promise<string>} ID de la carpeta "CERTIFICADOS DE PLANILLA"
- */
 export const uploadToDrive = async (localFilePath, fullName, year, month, documentType, documentNumber, supervisorName = null) => {
+    console.log(`\n   === SUBIDA A DRIVE ===`);
+    console.log(`   Supervisor: ${supervisorName || 'NO DEFINIDO'}`);
+    console.log(`   Año: ${year}, Mes: ${month}`);
+    console.log(`   Instructor: ${fullName}`);
+
     if (!fs.existsSync(localFilePath)) {
-        throw new Error(`El archivo local no existe: ${localFilePath}`);
+        throw new Error(`Archivo no existe: ${localFilePath}`);
     }
+
     try {
-        const drive = getDriveClient();
-        const activeRootId = await validateAndGetRootId(drive);
+        const drive = await getDriveClient();
 
-        // 1. Determinar la carpeta del supervisor o usar la raíz
-        let parentFolderId = activeRootId;
+        // 1. Raíz
+        const rootFolderId = await getRootFolderId(drive);
+        console.log(`   1️⃣ Raíz: ${rootFolderId}`);
 
+        // 2. PLANILLAS
+        const planillasFolderId = await getOrCreatePlanillasFolder(drive, rootFolderId);
+        console.log(`   2️⃣ PLANILLAS: ${planillasFolderId}`);
+        let currentFolderId = planillasFolderId;
+
+        // 3. SUPERVISOR
+        let supervisorFolderId = null;
         if (supervisorName) {
-            console.log(`   📂 Buscando/Creando carpeta para supervisor: ${supervisorName}`);
-            parentFolderId = await findOrCreateFolder(drive, supervisorName.toUpperCase().trim(), activeRootId);
+            const supervisorFolderName = supervisorName.toUpperCase().trim();
+            console.log(`   3️⃣ Supervisor: ${supervisorFolderName}`);
+            currentFolderId = await findOrCreateFolder(drive, supervisorFolderName, currentFolderId);
+            supervisorFolderId = currentFolderId;
+            console.log(`      ID: ${currentFolderId}`);
+        } else {
+            console.log(`   ⚠️  NO HAY SUPERVISOR - archivos irán directos a PLANILLAS`);
         }
 
-        // 2. Crear/encontrar carpeta del Año
-        console.log(`   ☁️  Subiendo a Drive: ${year}/${month}/...`);
-        const yearFolderId = await findOrCreateFolder(drive, String(year), parentFolderId);
+        // 4. AÑO
+        const yearFolderName = String(year);
+        console.log(`   4️⃣ Año: ${yearFolderName}`);
+        currentFolderId = await findOrCreateFolder(drive, yearFolderName, currentFolderId);
 
-        // 3. Crear/encontrar carpeta del Mes dentro del Año
+        // 5. MES
         const monthNames = {
             1: "ENERO", 2: "FEBRERO", 3: "MARZO", 4: "ABRIL",
             5: "MAYO", 6: "JUNIO", 7: "JULIO", 8: "AGOSTO",
             9: "SEPTIEMBRE", 10: "OCTUBRE", 11: "NOVIEMBRE", 12: "DICIEMBRE"
         };
         const monthFolderName = monthNames[month] || String(month).padStart(2, "0");
-        const monthFolderId = await findOrCreateFolder(drive, monthFolderName, yearFolderId);
+        console.log(`   5️⃣ Mes: ${monthFolderName}`);
+        currentFolderId = await findOrCreateFolder(drive, monthFolderName, currentFolderId);
 
-        // 4. Generar nombre del archivo
+        // 6. Archivo
         const fileName = formatFileName(fullName, documentType, documentNumber);
+        console.log(`   6️⃣ Archivo: ${fileName}`);
+        console.log(`   📁 Carpeta final ID: ${currentFolderId}`);
 
-        // 5. Subir el PDF
         const fileMetadata = {
             name: fileName,
-            parents: [monthFolderId],
+            parents: [currentFolderId],
         };
 
         const media = {
@@ -240,8 +284,6 @@ export const uploadToDrive = async (localFilePath, fullName, year, month, docume
         const driveFileId = file.data.id;
         const driveUrl = file.data.webViewLink;
 
-        // === NUEVO: Configurar permisos públicos ===
-        console.log(`   🔒 Configurando permisos públicos...`);
         await drive.permissions.create({
             fileId: driveFileId,
             requestBody: {
@@ -249,20 +291,13 @@ export const uploadToDrive = async (localFilePath, fullName, year, month, docume
                 type: "anyone",
             },
         });
-        // ===========================================
 
-        console.log(`   ✅ Subido a Drive (Público): ${supervisorName || "RAIZ"}/${year}/${monthFolderName}/${fileName}`);
-        const shortUrl = (driveUrl || "").split("&")[0]; // Limpiar URL
-        console.log(`   🔗 ${shortUrl}`);
+        console.log(`   ✅ SUBIDO: ${driveUrl}`);
+        console.log(`   ======================\n`);
 
-        return { driveFileId, driveUrl };
+        return { driveFileId, driveUrl, supervisorFolderId };
     } catch (error) {
-        console.error("   ❌ Error en Google Drive:");
-        if (error.response && error.response.data) {
-            console.error("   - Datos:", JSON.stringify(error.response.data, null, 2));
-        } else {
-            console.error("   - Mensaje:", error.message);
-        }
+        console.error(`   ❌ DRIVE ERROR: ${error.message}`);
         throw error;
     }
 };

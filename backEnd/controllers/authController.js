@@ -1,5 +1,16 @@
+/**
+ * authController.js — Autenticación y gestión de contraseñas
+ *
+ * Endpoints:
+ *  POST /api/auth/login           → Login con documentType + documentNumber + password → JWT
+ *  POST /api/auth/change-password → Cambio obligatorio de contraseña (primer ingreso)
+ *  POST /api/auth/forgot-password → Envía código de 6 dígitos al correo del supervisor
+ *  POST /api/auth/verify-code     → Verifica código y restablece la contraseña
+ *
+ * El JWT incluye: { id, documentNumber, role, mustChangePassword }
+ * Duración del token: 8 horas (configurado en helpers/jwt.js)
+ */
 import bcrypt from "bcryptjs";
-import crypto from "crypto";
 import { validationResult } from "express-validator";
 import Supervisor from "../models/Supervisor.js";
 import { generateToken } from "../helpers/jwt.js";

@@ -1,3 +1,23 @@
+/**
+ * scraperRunner.js — Motor principal del scraping automático
+ *
+ * Ejecuta un cron job diario que procesa reportes pendientes de cada plataforma.
+ * Los reportes se procesan UNO POR UNO, priorizando nuevos (0 intentos) sobre reintentos.
+ * Máximo 3 intentos por reporte antes de marcarlo como "error".
+ *
+ * Flujo por reporte:
+ *  1. Obtener instructor y supervisor del reporte
+ *  2. Ejecutar el scraper de la plataforma correspondiente
+ *  3. Si exitoso: subir PDF a Google Drive (estructura SUPERVISOR/AÑO/MES)
+ *  4. Actualizar driveFolderUrl del supervisor con la carpeta real
+ *  5. Enviar correo de notificación al instructor
+ *  6. Al final del ciclo, enviar resumen por correo a cada supervisor
+ *
+ * Funciones exportadas:
+ *  - startScraperCron() → Inicia el cron job
+ *  - setCronStatus()    → Habilita/deshabilita el cron manualmente
+ *  - isCronActive()     → Consulta si el cron está habilitado
+ */
 import "dotenv/config";
 import cron from "node-cron";
 import mongoose from "mongoose";
@@ -115,15 +135,23 @@ const processPendingReports = async (platform) => {
             let decryptedApiKey = null;
             let supervisorName = null;
             let supervisorEmail = null;
+
+            console.log(`   📋 Reporte ${current._id} - supervisorId: ${current.supervisorId || 'NO DEFINIDO'}`);
+
             if (current.supervisorId) {
                 const supervisor = await Supervisor.findById(current.supervisorId);
                 if (supervisor) {
                     supervisorName = supervisor.name;
                     supervisorEmail = supervisor.email;
+                    console.log(`   👤 Supervisor encontrado: ${supervisorName}`);
                     if (supervisor.apiKey) {
                         decryptedApiKey = decrypt(supervisor.apiKey);
                     }
+                } else {
+                    console.log(`   ⚠️  Supervisor con ID ${current.supervisorId} no encontrado en DB`);
                 }
+            } else {
+                console.log(`   ⚠️  El reporte no tiene supervisorId asignado`);
             }
 
             // Preparar datos para el scraper
@@ -168,6 +196,13 @@ const processPendingReports = async (platform) => {
                     current.driveUrl = driveResult.driveUrl;
                     current.status = "downloaded";
                     console.log(`☁️  Reporte ${current._id} — subido a Drive`);
+
+                    // Actualizar el link de la carpeta del supervisor en Drive
+                    if (driveResult.supervisorFolderId && current.supervisorId) {
+                        const newFolderUrl = `https://drive.google.com/drive/folders/${driveResult.supervisorFolderId}`;
+                        await Supervisor.findByIdAndUpdate(current.supervisorId, { driveFolderUrl: newFolderUrl });
+                        console.log(`   📂 Carpeta del supervisor actualizada: ${newFolderUrl}`);
+                    }
 
                     // Correo #2: Notificar al instructor que su certificado está listo
                     if (instructor.email && driveResult.driveUrl) {

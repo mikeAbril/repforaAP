@@ -1,3 +1,18 @@
+/**
+ * reportController.js — API pública de reportes (sin autenticación)
+ *
+ * Endpoints:
+ *  GET  /api/reports/instructors/lookup → Busca instructor por tipo y número de documento
+ *  POST /api/reports                    → Crea un reporte nuevo con status "pending"
+ *
+ * Flujo de submitReport:
+ *  1. Valida campos comunes (express-validator) y específicos de plataforma
+ *  2. Busca o crea el Instructor (upsert por documentType + documentNumber)
+ *  3. Calcula el periodo del reporte
+ *  4. Crea el Report con status "pending" y el supervisorId recibido del frontend
+ *  5. Envía correo de confirmación al instructor
+ *  6. El scraperRunner o el dashboard se encargan de procesarlo después
+ */
 import { validationResult } from "express-validator";
 import Instructor from "../models/Instructor.js";
 import Report from "../models/Report.js";
