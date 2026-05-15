@@ -194,7 +194,7 @@ export const uploadToDrive = async (localFilePath, fullName, year, month, docume
     try {
         const drive = getDriveClient();
         const activeRootId = await validateAndGetRootId(drive);
-        
+
         // 1. Determinar la carpeta del supervisor o usar la raíz
         let parentFolderId = activeRootId;
 
