@@ -22,7 +22,10 @@ import { scrapeAsopagos } from "../scrapers/asopagosScraper.js";
 import { scrapeMiPlanilla } from "../scrapers/miPlanillaScraper.js";
 import { uploadToDrive } from "../services/driveService.js";
 import { decrypt } from "../utils/crypto.js";
+import { sendEmail } from "../utils/nodemailer.js";
 import path from "path";
+
+const platformLabels = { soi: 'SOI', asopagos: 'ASOPAGOS', mi_planilla: 'COMPENSAR (Mi Planilla)', aportes_en_linea: 'APORTES EN LÍNEA' };
 
 const SCRAPER_MAP = {
     soi: scrapeSoi,
@@ -316,10 +319,51 @@ const executeScraperAsync = async (report, scraperFn) => {
                     await Supervisor.findByIdAndUpdate(report.supervisorId, { driveFolderUrl: newFolderUrl });
                     console.log(`   📂 Carpeta del supervisor actualizada: ${newFolderUrl}`);
                 }
+
+                // Enviar correo de éxito al instructor
+                if (instructor.email && driveResult.driveUrl) {
+                    const driveLink = driveResult.driveUrl.split("&")[0];
+                    sendEmail(
+                        instructor.email,
+                        `Certificado listo - ${platformLabels[report.platform] || report.platform}`,
+                        `
+                            <p style="font-size: 16px;">Hola, <strong>${instructor.fullName}</strong></p>
+                            <p>Su certificado de seguridad social ha sido generado exitosamente y ya está disponible para descarga.</p>
+                            <div style="background-color: #f0fdf4; border-left: 4px solid #318335; padding: 16px 20px; margin: 20px 0; border-radius: 0 8px 8px 0;">
+                                <p style="margin: 0;"><strong>Plataforma:</strong> ${platformLabels[report.platform] || report.platform}</p>
+                                <p style="margin: 0;"><strong>Periodo:</strong> ${report.reportMonth}/${report.reportYear}</p>
+                            </div>
+                            <p>Puede descargar su certificado haciendo clic en el siguiente enlace:</p>
+                            <p><a href="${driveLink}" style="background-color: #318335; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: 600; display: inline-block;">Descargar Certificado</a></p>
+                        `
+                    ).catch(() => { });
+                }
             } catch (driveError) {
                 console.error(`Drive falló para ${report._id}: ${driveError.message}`);
             }
         } else {
+            // Correo #4: Alertar al supervisor si el error es de API Key
+            if (supervisorName && (/(api key|2captcha|captcha)/i.test(result.error || ''))) {
+                // Encontrar el email del supervisor
+                const supervisor = await Supervisor.findById(report.supervisorId);
+                if (supervisor && supervisor.email) {
+                    sendEmail(
+                        supervisor.email,
+                        'Alerta: Problema con la API Key de 2Captcha',
+                        `
+                            <p style="font-size: 16px;">Hola, <strong>${supervisorName}</strong></p>
+                            <p>Se detectó un problema con su <strong>API Key de 2Captcha</strong> durante la ejecución manual de certificados.</p>
+                            <div style="background-color: #fef2f2; border-left: 4px solid #dc2626; padding: 16px 20px; margin: 20px 0; border-radius: 0 8px 8px 0;">
+                                <p style="margin: 0; color: #991b1b;"><strong>Error:</strong> ${result.error}</p>
+                                <p style="margin: 0; color: #991b1b;"><strong>Instructor:</strong> ${instructor.fullName}</p>
+                                <p style="margin: 0; color: #991b1b;"><strong>Plataforma:</strong> ${platformLabels[report.platform] || report.platform}</p>
+                            </div>
+                            <p>Por favor revise su API Key o actualícela directamente desde la plataforma.</p>
+                        `
+                    ).catch(() => { });
+                }
+            }
+
             report.status = "error";
             report.errorReason = result.error || "Error desconocido en el scraper";
         }
