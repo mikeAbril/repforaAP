@@ -61,7 +61,7 @@
       <!-- Analytics Section -->
       <div class="analytics-grid q-mb-xl">
         <!-- Total Solicitudes -->
-        <div class="stat-card-premium primary">
+        <div class="stat-card-premium primary" v-if="profile.role !== 'admin'">
           <div class="stat-icon-box">
             <q-icon name="sym_o_description" size="24px" />
           </div>

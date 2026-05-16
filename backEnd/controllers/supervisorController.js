@@ -246,64 +246,101 @@ export const getDriveLink = async (req, res, next) => {
             return res.status(404).json({ success: false, message: "Supervisor no encontrado" });
         }
 
-        // Si ya lo tenemos guardado y NO es admin, lo devolvemos rápido
-        if (supervisor.role !== "admin" && supervisor.driveFolderUrl) {
-            return res.json({ success: true, url: supervisor.driveFolderUrl });
-        }
-
         const drive = await getDriveClient();
         const activeRootId = await getRootFolderId(drive);
 
-        // Si es admin, devolver la raíz de todos los supervisores
-        if (supervisor.role === "admin") {
-            return res.json({ success: true, url: `https://drive.google.com/drive/folders/${activeRootId}` });
+        // 1. Encontrar o crear la carpeta PLANILLAS en la raíz
+        const planillasRes = await drive.files.list({
+            q: `name='PLANILLAS' and '${activeRootId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`,
+            fields: "files(id, webViewLink)",
+            supportsAllDrives: true,
+            includeItemsFromAllDrives: true,
+        });
+
+        let planillasId = null;
+        let planillasUrl = null;
+
+        if (planillasRes.data.files.length > 0) {
+            planillasId = planillasRes.data.files[0].id;
+            planillasUrl = planillasRes.data.files[0].webViewLink;
+        } else {
+            const folder = await drive.files.create({
+                requestBody: { name: "PLANILLAS", mimeType: "application/vnd.google-apps.folder", parents: [activeRootId] },
+                fields: "id, webViewLink",
+                supportsAllDrives: true,
+            });
+            planillasId = folder.data.id;
+            planillasUrl = folder.data.webViewLink;
         }
 
-        // Si no lo tenemos y es supervisor normal, buscamos/creamos la carpeta en Drive
+        // Si es admin, devolver la carpeta pública PLANILLAS
+        if (supervisor.role === "admin") {
+            try {
+                await drive.permissions.create({
+                    fileId: planillasId,
+                    requestBody: { role: "reader", type: "anyone" }
+                });
+            } catch (e) {
+                console.error("Error asignando permisos públicos (Admin):", e.message);
+            }
+
+            if (supervisor.driveFolderUrl !== planillasUrl) {
+                supervisor.driveFolderUrl = planillasUrl;
+                await supervisor.save();
+            }
+
+            return res.json({ success: true, url: planillasUrl });
+        }
+
+        // Si es supervisor normal, buscamos/creamos su carpeta DENTRO de PLANILLAS
         const folderName = supervisor.name.toUpperCase().trim();
 
         const response = await drive.files.list({
-            q: `name='${folderName}' and '${activeRootId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`,
+            q: `name='${folderName}' and '${planillasId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`,
             fields: "files(id, webViewLink)",
             supportsAllDrives: true,
             includeItemsFromAllDrives: true,
         });
 
         let folderUrl = null;
+        let folderId = null;
 
         if (response.data.files.length > 0) {
+            folderId = response.data.files[0].id;
             folderUrl = response.data.files[0].webViewLink;
         } else {
-            // No existe, crear la carpeta
             const folder = await drive.files.create({
                 requestBody: {
                     name: folderName,
                     mimeType: "application/vnd.google-apps.folder",
-                    parents: [activeRootId],
+                    parents: [planillasId],
                 },
                 fields: "id, webViewLink",
                 supportsAllDrives: true,
             });
+            folderId = folder.data.id;
             folderUrl = folder.data.webViewLink;
-            
-            // Hacerla pública para lectura
-            await drive.permissions.create({
-                fileId: folder.data.id,
-                requestBody: {
-                    role: "reader",
-                    type: "anyone",
-                },
-            });
         }
 
-        // Guardar la URL en la base de datos para futuras consultas
-        supervisor.driveFolderUrl = folderUrl;
-        await supervisor.save();
+        // Asegurar siempre que sea pública
+        try {
+            await drive.permissions.create({
+                fileId: folderId,
+                requestBody: { role: "reader", type: "anyone" }
+            });
+        } catch (e) {
+            console.error("Error asignando permisos públicos (Supervisor):", e.message);
+        }
+
+        // Actualizar en DB
+        if (supervisor.driveFolderUrl !== folderUrl) {
+            supervisor.driveFolderUrl = folderUrl;
+            await supervisor.save();
+        }
 
         res.json({ success: true, url: folderUrl });
     } catch (error) {
         console.error("Error obteniendo carpeta de Drive:", error.message);
-        // Si hay error (ej: sin credenciales), devolver la raíz por defecto
         res.json({ success: true, url: "https://drive.google.com/drive/folders/" + process.env.GOOGLE_DRIVE_FOLDER_ID });
     }
 };

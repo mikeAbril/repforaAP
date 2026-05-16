@@ -1,5 +1,5 @@
 <template>
-  <div class="drive-auth-panel">
+  <div class="drive-auth-panel q-pa-md">
     <div class="row items-center justify-between q-mb-md">
       <div class="header-info">
         <h3 class="card-title text-h5 text-weight-bold q-ma-none text-dark">Conexión Google Drive</h3>
@@ -85,10 +85,8 @@
                       <li>
                         Ve a <a href="https://console.cloud.google.com" target="_blank">Google Cloud Console</a>
                       </li>
-                      <li>Selecciona o crea un proyecto</li>
-                      <li>Ve a "APIs y Servicios" → "Credenciales"</li>
-                      <li>Edita tu "ID de cliente OAuth 2.0"</li>
-                      <li>En "URI de redirección autorizada", agrega:</li>
+                      <li>Crea unas credenciales de cliente OAuth en Google Cloud Console (Tipo: Aplicación web)</li>
+                      <li>Configura esta URI de redireccionamiento:</li>
                     </ol>
                     <div class="code-block">
                       <code>{{ redirectUri }}</code>
@@ -101,9 +99,8 @@
                         class="copy-btn"
                       />
                     </div>
-                    <ol class="q-ma-none q-pa-md instructions" start="6">
-                      <li>Guarda los cambios</li>
-                      <li>Usa el botón "Autorizar Google Drive" aquí para conectar</li>
+                    <ol class="q-ma-none q-pa-md instructions" start="4">
+                      <li>Descarga el JSON de credenciales y pon los datos en el archivo .env</li>
                     </ol>
                   </div>
                 </q-card-section>
@@ -170,11 +167,14 @@ const formatDate = (dateStr) => {
 const checkStatus = async () => {
   try {
     const res = await api.get('/drive/auth/status')
-    if (res.data.success) {
-      authStatus.value = res.data
-    }
+    authStatus.value = res.data
   } catch (error) {
     console.error('Error checking drive status:', error)
+    authStatus.value = {
+      authenticated: false,
+      isExpired: false,
+      message: 'Error verificando estado'
+    }
   }
 }
 
@@ -493,11 +493,14 @@ onUnmounted(() => {
   font-family: 'Courier New', monospace;
   font-size: 0.85rem;
   word-break: break-all;
+  overflow: hidden;
 }
 
 .code-block code {
   display: block;
   padding-right: 40px;
+  white-space: pre-wrap;
+  word-wrap: break-word;
 }
 
 .copy-btn {
