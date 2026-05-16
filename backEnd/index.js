@@ -93,6 +93,19 @@ app.get("/api/health", (_req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
+// --- SPA Catch-All: servir index.html para rutas del frontend ---
+// Esto permite que Vue Router (createWebHistory) funcione en producción.
+// Cualquier ruta que NO sea /api/* se redirige al index.html del frontend.
+const indexPath = path.join(publicPath, "index.html");
+if (fs.existsSync(indexPath)) {
+  app.get("*", (req, res) => {
+    // No interceptar rutas de API ni archivos estáticos que existan
+    if (!req.path.startsWith("/api")) {
+      return res.sendFile(indexPath);
+    }
+  });
+}
+
 // --- Middleware de errores global ---
 app.use((err, _req, res, _next) => {
   console.error("🔴 Error:", err.message);

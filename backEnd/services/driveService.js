@@ -89,9 +89,10 @@ export const getDriveClient = async () => {
 
     const { accessToken, refreshToken } = await getStoredCredentials();
 
-    const redirectUri = process.env.NODE_ENV === "production" 
-        ? (process.env.FRONTEND_URL || "").replace(/\/$/, "") + "/api/drive/auth/callback"
-        : "http://localhost:3000/api/drive/auth/callback";
+    // El redirectUri aquí es requerido por el constructor de OAuth2Client,
+    // pero NO se usa en las llamadas API (upload, list, etc.)
+    // Las redirecciones reales se manejan en driveAuthController.js con req dinámico
+    const redirectUri = "http://localhost:3000/api/drive/auth/callback";
 
     const oAuth2Client = new google.auth.OAuth2(
         clientId,

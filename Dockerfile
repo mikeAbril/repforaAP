@@ -1,84 +1,59 @@
 # ===================== STAGE 1: Frontend Build =====================
-FROM node:20-alpine AS frontend-builder
+FROM node:20-slim AS frontend-builder
 
 WORKDIR /app/frontend
 
 # Copiar package files primero para caché de dependencias
 COPY frontEnd/package*.json ./
 
-RUN npm ci --only=production
+# Instalar TODAS las dependencias (vite es devDependency, se necesita para build)
+RUN npm ci
 
 # Copiar resto del frontend
 COPY frontEnd/ ./
 
-# Variables de entorno para producción
-ARG VITE_API_URL
-ENV VITE_API_URL=${VITE_API_URL}
+# En producción, la API está en el mismo dominio bajo /api
+# Esto se usa en tiempo de BUILD por Vite
+ENV VITE_API_URL=/api
 
 # Construir frontend
 RUN npm run build
 
-# ===================== STAGE 2: Backend Build =====================
-FROM node:20-alpine AS backend-builder
+# ===================== STAGE 2: Backend + Runtime =====================
+# Usamos playwright's imagen oficial que ya trae Chromium y todas las deps
+FROM mcr.microsoft.com/playwright:v1.52.0-noble
+
+# Instalar Node.js 20 (la imagen de Playwright trae una versión, pero aseguramos la correcta)
+# La imagen de Playwright ya trae Node.js, así que solo necesitamos dumb-init
+RUN apt-get update && apt-get install -y --no-install-recommends dumb-init && \
+    rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Instalar dependencias de Playwright
-RUN apk add --no-cache \
-    chromium \
-    nss \
-    freetype \
-    freetype-dev \
-    harfbuzz \
-    ca-certificates \
-    ttf-freefont \
-    wget \
-    curl
-
-# Copiar package files primero para caché de dependencias
+# Copiar package files del backend
 COPY backEnd/package*.json ./
 
-RUN npm ci --only=production
+# Instalar solo dependencias de producción
+RUN npm ci --omit=dev
 
 # Copiar resto del backend
 COPY backEnd/ ./
 
-# ===================== STAGE 3: Runtime =====================
-FROM node:20-alpine
+# Crear directorios necesarios
+RUN mkdir -p ./downloads ./public
 
-WORKDIR /app
-
-# Instalar dependencias necesarias para runtime
-RUN apk add --no-cache \
-    chromium \
-    nss \
-    freetype \
-    harfbuzz \
-    ca-certificates \
-    ttf-freefont \
-    dumb-init
-
-# Configurar Playwright para usar Chromium del sistema
-ENV PLAYWRIGHT_BROWSERS_PATH=0
-ENV CHROMIUM_PATH=/usr/bin/chromium-browser
-
-# Copiar desde el builder
-COPY --from=backend-builder /app/node_modules ./node_modules
-COPY --from=backend-builder /app ./
-
-# Crear directorio para servir frontend
-RUN mkdir -p ./public
-
-# Copiar build del frontend
+# Copiar build del frontend al directorio public
 COPY --from=frontend-builder /app/frontend/dist ./public
+
+# Indicar a Playwright que use los navegadores del sistema (ya instalados en la imagen)
+ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+ENV NODE_ENV=production
+ENV HEADLESS=true
 
 # Exponer puerto
 EXPOSE 3000
 
-# Variable de entorno por defecto
-ENV NODE_ENV=production
-
-# Entrypoint
+# Entrypoint con dumb-init para manejo correcto de señales
 ENTRYPOINT ["dumb-init", "--"]
 
 CMD ["node", "index.js"]

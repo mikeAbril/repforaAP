@@ -4,10 +4,10 @@ npm-debug.log
 yarn-error.log
 pnpm-debug.log
 
-# Environment variables
-.env
-.env.local
-.env.*.local
+# Environment variables (las de producción se pasan por Coolify)
+**/.env
+**/.env.local
+**/.env.*.local
 
 # Git
 .git
@@ -17,6 +17,7 @@ pnpm-debug.log
 # IDE
 .vscode
 .idea
+.claude
 *.swp
 *.swo
 *~
@@ -25,10 +26,16 @@ pnpm-debug.log
 .DS_Store
 Thumbs.db
 
-# Build outputs
-backEnd/downloads
-backEnd/assets/temp
-backEnd/assets/*.zip
+# Build outputs (temporales del backend)
+backEnd/downloads/*
+!backEnd/downloads/.gitkeep
+
+# Frontend build (se genera durante el Docker build)
+frontEnd/dist
+
+# Documentación (no necesaria en el contenedor)
+*.md
+!frontEnd/README.md
 
 # Tests
 coverage
@@ -36,10 +43,4 @@ coverage
 
 # Misc
 *.log
-README.md
-CLAUDE.md
-INFORME_DE_REVISION.md
-STYLES_GUIDE.md
-SYSTEM_DOCUMENTATION.md
-step.md
 deploy

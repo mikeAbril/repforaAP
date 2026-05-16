@@ -1,138 +1,148 @@
 # Despliegue con Coolify (Docker)
 
-## Configuración en Coolify
+## Variables de Entorno en Coolify
 
-### Variables de Entorno
-
-Agrega las siguientes variables de entorno en Coolify:
-
-#### Variables Obligatorias
+### Obligatorias
 ```
 NODE_ENV=production
 PORT=3000
 
-# MongoDB URI
+# MongoDB
 MONGO_URI=mongodb+srv://usuario:password@cluster.mongodb.net/certificados
 
-# JWT Secret (cámbialo por algo seguro)
-JWT_SECRET=tu_jwt_secret_seguro
+# Autenticación
+JWT_SECRET=tu_jwt_secret_seguro_aqui
 
-# FRONTEND_URL (la URL donde estará desplegada)
-FRONTEND_URL=https://tu-dominio.com
+# Encriptación de API Keys (32 caracteres exactos)
+CRYPTO_KEY=tu_clave_de_32_caracteres_aqui!
 
-# VITE_API_URL (URL de la API para el frontend build)
-VITE_API_URL=https://tu-dominio.com/api
-```
+# Correo (Gmail con contraseña de aplicación)
+MAIL_USER=correo@gmail.com
+MAIL_PASS=contraseña_de_aplicación
 
-#### Variables de Google Drive (OBLIGATORIAS para subir archivos)
-
-El sistema utiliza **OAuth2** con cuentas personales o de Workspace. No uses Service Accounts.
-
-```
-# Credenciales del cliente OAuth2 (OBLIGATORIAS)
-GOOGLE_OAUTH_CLIENT_ID=tu_client_id_de_google_cloud
-GOOGLE_OAUTH_CLIENT_SECRET=tu_client_secret_de_google_cloud
-
-# ID de la carpeta raíz específica (OPCIONAL)
-# Si no lo pones, se crearán en la raíz ("Mi unidad") de quien inicie sesión
-GOOGLE_DRIVE_FOLDER_ID=1AbCdEfGhIjKlMnOpQrStUvWxYz
-```
-
-**IMPORTANTE: Para configurar Google Drive OAuth2:**
-
-1. Ve a [Google Cloud Console](https://console.cloud.google.com)
-2. Crea o selecciona un proyecto
-3. Habilita la API de Google Drive:
-   - APIs y Servicios → Biblioteca → Buscar "Google Drive API" → Habilitar
-4. Configura la Pantalla de Consentimiento OAuth:
-   - Tipo de usuario: Externo (o Interno si usas Workspace)
-   - Agrega los dominios autorizados y tu correo
-   - Agrega el scope: `.../auth/drive.file`
-5. Crea credenciales OAuth2:
-   - APIs y Servicios → Credenciales → Crear credenciales → ID de cliente de OAuth
-   - Tipo de aplicación: Aplicación web
-   - Orígenes de JavaScript autorizados: `https://tu-dominio.com`
-   - URI de redireccionamiento autorizados: `https://tu-dominio.com/api/drive/auth/callback`
-6. Copia el **ID de cliente** y el **Secreto de cliente** en las variables correspondientes en Coolify.
-7. Una vez desplegado, el **Admin** debe entrar a la app, ir a **Configuración → Google Drive** y autorizar el acceso.
-
-#### Variables Opcionales (según funcionalidades)
-```
-# CRYPTO_KEY (32 caracteres)
-CRYPTO_KEY=tu_clave_32_caracteres_aqui
-
-# Nodemailer (correo)
-MAIL_USER=tu_email@ejemplo.com
-MAIL_PASS=tu_password_aplicacion
-
-# Playwright headless mode
+# Scrapers
 HEADLESS=true
 ```
 
-### Configuración en Coolify
+### Google Drive OAuth2
+```
+GOOGLE_OAUTH_CLIENT_ID=tu_client_id.apps.googleusercontent.com
+GOOGLE_OAUTH_CLIENT_SECRET=GOCSPX-tu_client_secret
 
-1. Crea un nuevo proyecto en Coolify
-2. Selecciona "Dockerfile" como tipo de aplicación
-3. Configura:
+# Opcional: ID de carpeta raíz en Drive
+# Si no se define, se usará "Mi Drive" del usuario que autorice
+GOOGLE_DRIVE_FOLDER_ID=
+```
+
+> **Nota:** NO se necesita `FRONTEND_URL` ni `VITE_API_URL`. El sistema detecta automáticamente el dominio en producción.
+
+---
+
+## Configurar OAuth2 en Google Cloud
+
+1. Ve a [Google Cloud Console](https://console.cloud.google.com)
+2. Crea o selecciona un proyecto
+3. **APIs y Servicios → Biblioteca** → Buscar "Google Drive API" → Habilitar
+4. **Pantalla de consentimiento OAuth**:
+   - Tipo: Externo
+   - Agrega correo de soporte y dominios autorizados
+   - Scope: `https://www.googleapis.com/auth/drive.file`
+5. **Credenciales → Crear → ID de cliente OAuth 2.0**:
+   - Tipo: **Aplicación web**
+   - Orígenes autorizados: `https://tu-dominio.com`
+   - URI de redirección: `https://tu-dominio.com/api/drive/auth/callback`
+6. Copia Client ID y Client Secret a las variables de Coolify
+7. Una vez desplegado, el **Admin** debe ir a **Configuración → Google Drive** y autorizar
+
+---
+
+## Configuración en Coolify
+
+1. Crear nuevo proyecto → seleccionar **"Dockerfile"**
+2. Configurar:
    - **Docker Context:** `/` (raíz del repositorio)
    - **Dockerfile Path:** `Dockerfile`
    - **Port:** `3000`
-4. Agrega las variables de entorno listadas arriba
-5. Deploy
+3. Agregar las variables de entorno
+4. Deploy
 
-### MongoDB
+---
 
-Para MongoDB tienes dos opciones:
+## MongoDB
 
-**Opción 1: Usar MongoDB Atlas (Recomendado)**
-- Crea un cluster gratuito en MongoDB Atlas
-- Obtiene la connection string y agrégala a `MONGO_URI`
+**Opción 1: MongoDB Atlas (Recomendado)**
+- Cluster gratuito en [MongoDB Atlas](https://www.mongodb.com/atlas)
+- Copiar connection string a `MONGO_URI`
 
-**Opción 2: Usar Coolify para MongoDB**
-- Crea un servicio de MongoDB en Coolify
-- Agrega la conexión a `MONGO_URI`
+**Opción 2: MongoDB en Coolify**
+- Crear servicio MongoDB en Coolify
+- Usar la URI interna como `MONGO_URI`
 
-### Build Local (Para pruebas)
+---
+
+## Build Local (pruebas)
 
 ```bash
-# Copia tu .env con las variables necesarias
-docker build -t automatizacion-certificados .
-docker run -p 3000:3000 --env-file .env automatizacion-certificados
+docker build -t cert-sena .
+docker run -p 3000:3000 --env-file backEnd/.env cert-sena
 ```
 
-### Solución de Problemas
+---
 
-#### Playwright en Docker
-El Dockerfile ya incluye las dependencias necesarias para que Playwright funcione en Alpine Linux usando Chromium del sistema.
+## Cómo funciona el Dockerfile
 
-#### Archivos estáticos
-El Dockerfile compila el frontend y copia los archivos a `/app/public` en el contenedor. El backend los sirve automáticamente.
+1. **Stage 1 (frontend-builder):** Instala dependencias del frontend (incluyendo Vite), ejecuta `npm run build`, genera `dist/`.
+2. **Stage 2 (runtime):** Usa la imagen oficial de Playwright (Ubuntu con Chromium pre-instalado), instala dependencias del backend, copia el `dist/` del frontend a `./public`.
+3. El backend sirve `./public` como archivos estáticos y tiene un **catch-all** que redirige cualquier ruta no-API a `index.html` para que Vue Router funcione.
 
-#### Google Drive
-- **Error 403**: Comparte la carpeta con el email del Service Account (está en el JSON)
-- **Error 404**: El folder_id no existe, se creará/usará "PLANILLAS" automáticamente
-- **Permiso insuficiente**: El Service Account necesita permisos de "Editor" en la carpeta
+---
 
-#### CORS
-Asegúrate de que `FRONTEND_URL` incluya todos los dominios donde se accederá a la aplicación.
+## Estructura en el contenedor
+
+```
+/app
+├── index.js              ← Backend Express
+├── node_modules/
+├── controllers/
+├── routes/
+├── scrapers/
+├── services/
+├── ...
+├── downloads/            ← PDFs temporales
+└── public/               ← Frontend compilado (dist/)
+    ├── index.html
+    └── assets/
+```
+
+---
+
+## Solución de Problemas
+
+### Playwright / Scrapers
+- La imagen Docker usa `mcr.microsoft.com/playwright` con Chromium pre-instalado
+- `HEADLESS=true` es obligatorio en producción (no hay display)
+- Los scrapers funcionan automáticamente con el Chromium del sistema
+
+### Rutas del frontend (404)
+- El backend tiene un catch-all `app.get("*")` que sirve `index.html`
+- Esto permite que `/login`, `/supervisor`, etc. funcionen correctamente
+- Solo las rutas que empiezan con `/api` son manejadas por Express
+
+### Google Drive
+- **Error 403**: Verifica que el scope sea `drive.file` y que la app esté publicada
+- **Token expirado**: El sistema renueva automáticamente el access_token usando el refresh_token
+- **Permiso público**: Los archivos se comparten como "anyone with link" automáticamente
+
+### CORS
+- En producción, frontend y backend están en el mismo dominio → no hay problemas de CORS
+- Los orígenes permitidos están hardcodeados en `index.js` para desarrollo local
 
 ### Estructura de carpetas en Drive
-
-Si defines `GOOGLE_DRIVE_FOLDER_ID`:
 ```
-TU_CARPETA/
-└── [NOMBRE_SUPERVISOR]/
-    └── [AÑO]/
-        └── [MES]/
-            └── [INSTRUCTOR].pdf
-```
-
-Si NO defines `GOOGLE_DRIVE_FOLDER_ID`:
-```
-Mi Drive/
-└── PLANILLAS/
-    └── [NOMBRE_SUPERVISOR]/
-        └── [AÑO]/
-            └── [MES]/
-                └── [INSTRUCTOR].pdf
+📁 [GOOGLE_DRIVE_FOLDER_ID o Mi Drive]
+└── 📁 PLANILLAS
+    └── 📁 NOMBRE DEL SUPERVISOR
+        └── 📁 2026
+            └── 📁 ENERO
+                └── 📄 apellido1_apellido2_nombre1_nombre2.pdf
 ```
