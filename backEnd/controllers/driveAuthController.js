@@ -18,24 +18,25 @@ import DriveCredentials from "../models/DriveCredentials.js";
 
 const SCOPES = ["https://www.googleapis.com/auth/drive.file"];
 
-// En producción, usar la URL del backend
-const getRedirectUri = () => {
+// En producción, detectamos automáticamente el host
+const getRedirectUri = (req) => {
     if (process.env.NODE_ENV === "production") {
-        const frontendUrl = process.env.FRONTEND_URL || "";
-        return frontendUrl.replace(/\/$/, "") + "/api/drive/auth/callback";
+        const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'https';
+        const host = req.headers['x-forwarded-host'] || req.get('host');
+        return `${protocol}://${host}/api/drive/auth/callback`;
     }
-    return "http://localhost:3000/api/drive/auth/callback";
+    return "http://localhost:5173/api/drive/auth/callback";
 };
 
 /**
  * Genera la URL de autorización de Google Drive
  * Sin usar googleapis para evitar el bug "next is not a function"
  */
-const generateAuthUrl = (clientId) => {
+const generateAuthUrl = (clientId, req) => {
     const scopeParam = SCOPES.join(" ");
     return `https://accounts.google.com/o/oauth2/v2/auth?` +
         `client_id=${encodeURIComponent(clientId)}&` +
-        `redirect_uri=${encodeURIComponent(getRedirectUri())}&` +
+        `redirect_uri=${encodeURIComponent(getRedirectUri(req))}&` +
         `response_type=code&` +
         `scope=${encodeURIComponent(scopeParam)}&` +
         `access_type=offline&` +
@@ -45,7 +46,7 @@ const generateAuthUrl = (clientId) => {
 /**
  * Intercambia el código de autorización por tokens usando fetch directo
  */
-const exchangeCodeForTokens = async (code) => {
+const exchangeCodeForTokens = async (code, req) => {
     const clientId = process.env.GOOGLE_OAUTH_CLIENT_ID;
     const clientSecret = process.env.GOOGLE_OAUTH_CLIENT_SECRET;
 
@@ -58,7 +59,7 @@ const exchangeCodeForTokens = async (code) => {
             code,
             client_id: clientId,
             client_secret: clientSecret,
-            redirect_uri: getRedirectUri(),
+            redirect_uri: getRedirectUri(req),
             grant_type: "authorization_code",
         }),
     });
@@ -81,7 +82,7 @@ const exchangeCodeForTokens = async (code) => {
 /**
  * Función interna para procesar el código de autorización
  */
-const processAuthCode = async (code) => {
+const processAuthCode = async (code, req) => {
     const clientId = process.env.GOOGLE_OAUTH_CLIENT_ID;
     const clientSecret = process.env.GOOGLE_OAUTH_CLIENT_SECRET;
 
@@ -90,7 +91,7 @@ const processAuthCode = async (code) => {
     }
 
     try {
-        const tokens = await exchangeCodeForTokens(code);
+        const tokens = await exchangeCodeForTokens(code, req);
 
         // Calcular fecha de expiración
         const expiryDate = new Date(Date.now() + (tokens.expires_in * 1000));
@@ -236,7 +237,7 @@ const getCallbackHTML = (success, message) => {
             // Fallback: redirect si no se puede cerrar
             setTimeout(function() {
                 if (!window.closed) {
-                    window.location.href = '${process.env.FRONTEND_URL || 'http://localhost:5173'}/#/admin';
+                    window.location.href = window.location.origin + '/#/admin';
                 }
             }, 3500);
         })();
@@ -261,12 +262,12 @@ export const getAuthUrl = async (req, res) => {
             });
         }
 
-        const authUrl = generateAuthUrl(clientId);
+        const authUrl = generateAuthUrl(clientId, req);
 
         res.json({
             success: true,
             authUrl,
-            redirectUri: getRedirectUri()
+            redirectUri: getRedirectUri(req)
         });
     } catch (error) {
         console.error("Error generando URL de autorización:", error);
@@ -298,7 +299,7 @@ export const handleAuthCallbackGet = async (req, res) => {
         }
 
         // Procesar el código
-        await processAuthCode(code);
+        await processAuthCode(code, req);
 
         // Mostrar página de éxito
         res.send(getCallbackHTML(true, "Google Drive conectado correctamente"));
@@ -323,7 +324,7 @@ export const handleAuthCallbackPost = async (req, res) => {
             });
         }
 
-        const result = await processAuthCode(code);
+        const result = await processAuthCode(code, req);
 
         res.json({
             success: true,

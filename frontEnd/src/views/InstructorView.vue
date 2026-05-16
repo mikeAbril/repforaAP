@@ -122,17 +122,24 @@
                     :label="getPlaceholder(field.name)"
                     dense
                     readonly
+                    input-class="cursor-pointer"
+                    class="cursor-pointer"
                     lazy-rules
                     :rules="[val => (val !== null && val !== undefined && val !== '') || 'El campo es requerido']"
+                    :ref="el => { if (el) inputRefs[field.name] = el }"
                   >
                     <template v-slot:prepend>
-                      <q-icon :name="'sym_o_' + getIcon(field.name)" size="20px" />
+                      <q-icon :name="'sym_o_' + getIcon(field.name)" size="20px" class="cursor-pointer" />
                     </template>
                     <template v-slot:append>
                       <q-icon name="sym_o_event" class="cursor-pointer" />
                     </template>
                     <q-popup-proxy transition-show="scale" transition-hide="scale">
-                      <q-date v-model="formData[field.name]" mask="YYYY-MM-DD">
+                      <q-date 
+                        v-model="formData[field.name]" 
+                        mask="YYYY-MM-DD"
+                        @update:model-value="() => { setTimeout(() => { if (inputRefs[field.name]) inputRefs[field.name].validate(); }, 50) }"
+                      >
                         <div class="row items-center justify-end">
                           <q-btn v-close-popup label="Cerrar" color="primary" flat />
                         </div>
@@ -187,6 +194,7 @@ const overlayMessage = ref('Procesando solicitud...');
 const showSuccessOverlay = ref(false);
 const formRef = ref(null);
 const selectedPlatform = ref(null);
+const inputRefs = ref({});
 
 const platformOptions = [
   { label: 'SOI', value: 'soi' },
@@ -223,7 +231,7 @@ const getIcon = (fieldName) => iconMap[fieldName] || 'input';
 const placeholderMap = {
   documentType: 'Seleccione el tipo de documento...',
   documentNumber: 'Escribe tu número de documento...',
-  documentIssueDate: '',
+  documentIssueDate: 'Selecciona la fecha de expedición...',
   fullName: 'Escribe tu nombre completo...',
   email: 'Escribe tu correo electrónico...',
   eps: 'Selecciona tu EPS...',
