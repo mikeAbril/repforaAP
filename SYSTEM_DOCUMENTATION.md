@@ -1,454 +1,579 @@
-# Manual Técnico y de Operación — Automatización de Certificados
+# 📘 Manual Técnico — Sistema de Automatización de Certificados de Seguridad Social
 
-Este documento detalla el funcionamiento interno del sistema, sus componentes clave, y sirve como guía paso a paso para quienes vayan a realizar pruebas o configurar el proyecto desde cero.
+> **Última actualización:** 16 de mayo de 2026  
+> **Stack:** Node.js (Express) + Vue 3 (Quasar) + MongoDB + Playwright + Google Drive API
+
+Este documento consolida toda la documentación técnica del proyecto. Cubre arquitectura, cada archivo del backend y frontend, modelos de datos, endpoints, configuración y despliegue.
 
 ---
 
 ## 1. Arquitectura General
 
 ```
-Contratista (público)          Supervisor (con login)
-       ↓                              ↓
-  POST /api/reports              GET /api/dashboard/...
-       ↓                              ↓
-  MongoDB (status: pending)     Ve reportes y estados
-       ↓
-  scraperRunner.js (cron 2AM o manual)
-       ↓
-  Scraper específico (SOI, Asopagos, etc.)
-       ↓
-  PDF descargado → Google Drive → status: downloaded
+┌─────────────────────────────────────────────────────────────────────┐
+│                        USUARIO FINAL                                │
+│  Instructor (público)              Supervisor / Admin (con login)   │
+│       │                                    │                        │
+│  Formulario de planilla            Dashboard + Panel Admin          │
+└───────┬────────────────────────────────────┬────────────────────────┘
+        │ POST /api/reports                  │ GET/POST /api/dashboard/*
+        ▼                                    ▼
+┌──────────────────────── BACKEND (Express) ──────────────────────────┐
+│  index.js → Rutas → Controllers → Models (Mongoose) → MongoDB      │
+│                                                                      │
+│  scraperRunner.js (cron)                                             │
+│    ├─ soiScraper.js                                                  │
+│    ├─ asopagosScraper.js         ─── Playwright + 2Captcha ───►     │
+│    ├─ miPlanillaScraper.js                                           │
+│    └─ aportesEnLineaScraper.js                                       │
+│         │                                                            │
+│         ▼                                                            │
+│  driveService.js ──► Google Drive API ──► PDF público en Drive       │
+│  nodemailer.js   ──► Gmail SMTP     ──► Correos al instructor       │
+└──────────────────────────────────────────────────────────────────────┘
 ```
+
+### Flujo principal
+
+1. **Instructor** llena formulario público → se crea `Instructor` (upsert) + `Report` con status `pending`.
+2. **Cron** (o ejecución manual) toma reportes `pending`, ejecuta el scraper de la plataforma correspondiente.
+3. **Scraper** descarga el PDF del certificado → `driveService` lo sube a Google Drive → status `downloaded`.
+4. **Nodemailer** envía correo al instructor con enlace de descarga.
+5. **Supervisor** ve todo desde su dashboard; **Admin** gestiona supervisores y configura Drive.
 
 ---
 
-## 2. Estructura del Backend
+## 2. Backend — Estructura de Carpetas
 
 ```
 backEnd/
-├── index.js               ← Punto de entrada (Express + middlewares + cron)
+├── index.js                    # Punto de entrada: Express, CORS, rutas, cron
+├── package.json                # Dependencias y scripts npm
+├── nodemon.json                # Configuración de nodemon (dev)
+├── swagger.yaml                # Documentación OpenAPI (Swagger UI en /api-docs)
+├── .env                        # Variables de entorno (NO en Git)
+├── .env-example                # Plantilla de variables de entorno
+│
 ├── config/
-│   ├── db.js              ← Conexión a MongoDB
-│   └── cron-status.json   ← Estado del cron (generado automáticamente)
-├── controllers/           ← Lógica de cada endpoint
-├── helpers/
-│   └── jwt.js             ← Generación y verificación de tokens JWT
-├── middlewares/
-│   └── authMiddleware.js  ← Protección de rutas con JWT
+│   └── db.js                   # Conexión a MongoDB (con reconexión automática)
+│
 ├── models/
-│   ├── Contractor.js      ← Esquema: contratista
-│   ├── Report.js          ← Esquema: reporte/solicitud
-│   └── Supervisor.js      ← Esquema: supervisor
+│   ├── Instructor.js           # Esquema del instructor/contratista
+│   ├── Supervisor.js           # Esquema del supervisor (incluye admin)
+│   ├── Report.js               # Esquema del reporte/solicitud
+│   └── DriveCredentials.js     # Tokens OAuth2 de Google Drive
+│
 ├── routes/
-│   ├── authRoutes.js      ← POST /api/auth/login
-│   ├── reportRoutes.js    ← POST /api/reports
-│   ├── dashboardRoutes.js ← GET  /api/dashboard/stats, /reports
-│   ├── supervisorRoutes.js← GET/PUT /api/supervisors/...
-│   └── systemRoutes.js    ← GET/POST /api/system/cron/...
-├── scrapers/              ← ⭐ Motor de automatización (ver sección 3)
-│   ├── scraperRunner.js
-│   ├── soiScraper.js
-│   ├── asopagosScraper.js
-│   ├── miPlanillaScraper.js
-│   └── aportesEnLineaScraper.js
-├── services/
-│   ├── driveService.js    ← Subida a Google Drive (ver sección 4)
-│   └── captchaService.js  ← Integración con 2Captcha
-├── scripts/
-│   ├── addSupervisor.js   ← Crear supervisores por terminal
-│   └── checkSupervisors.js← Listar supervisores existentes
+│   ├── authRoutes.js           # Login, forgot/reset password, admin temporal
+│   ├── reportRoutes.js         # Crear reporte + lookup instructor
+│   ├── dashboardRoutes.js      # CRUD reportes del supervisor (protegido)
+│   ├── supervisorRoutes.js     # Perfil, admin CRUD supervisores
+│   ├── systemRoutes.js         # Control del cron (status/toggle)
+│   └── driveAuthRoutes.js      # OAuth2 Google Drive (url, callback, status)
+│
+├── controllers/
+│   ├── authController.js       # login, changePassword, forgotPassword, verifyCode
+│   ├── reportController.js     # submitReport, lookupInstructor
+│   ├── dashboardController.js  # getReports, getStats, runReport, deleteReport
+│   ├── supervisorController.js # perfil, apiKey, driveLink, admin CRUD
+│   └── driveAuthController.js  # OAuth2 flow completo (URL dinámica)
+│
+├── middlewares/
+│   └── authMiddleware.js       # authMiddleware (JWT) + roleMiddleware
+│
+├── helpers/
+│   ├── jwt.js                  # generateToken / verifyToken (8h expiración)
+│   └── humanBehavior.js        # randomDelay, humanType, humanClick, humanSelect
+│
 ├── utils/
-│   └── setupDriveAuth.js  ← Generar refresh token de Google Drive OAuth2
-├── validations/           ← Reglas de validación (express-validator)
-├── downloads/             ← PDFs temporales (se eliminan tras subir a Drive)
-├── swagger.yaml           ← Documentación de la API (/api-docs)
-└── .env                   ← Variables de entorno
+│   ├── crypto.js               # encrypt / decrypt (AES-256-CBC) para API Keys
+│   ├── nodemailer.js           # sendEmail() con plantilla institucional SENA
+│   └── setupDriveAuth.js       # Script CLI para generar refresh token
+│
+├── validations/
+│   ├── auth.validation.js      # Reglas para login (documentType, documentNumber, password)
+│   ├── report.validation.js    # Reglas para crear reporte (campos comunes)
+│   └── platform.validation.js  # Campos obligatorios por plataforma (platformData)
+│
+├── scrapers/
+│   ├── scraperRunner.js        # Orquestador: cron, reintentos, limpieza
+│   ├── soiScraper.js           # Scraper SOI (sin captcha)
+│   ├── asopagosScraper.js      # Scraper Asopagos (captcha imagen)
+│   ├── miPlanillaScraper.js    # Scraper Compensar (captcha numérico)
+│   └── aportesEnLineaScraper.js # Scraper Aportes en Línea (reCAPTCHA v2)
+│
+├── services/
+│   └── driveService.js         # getDriveClient, uploadToDrive, getRootFolderId
+│
+├── scripts/
+│   ├── addSupervisor.js        # CLI: crear supervisor
+│   ├── createAdmin.js          # CLI: crear/actualizar administrador
+│   └── checkSupervisors.js     # CLI: listar supervisores existentes
+│
+├── assets/
+│   └── logo-sena.png           # Logo SENA para correos
+│
+└── downloads/                  # PDFs temporales (se eliminan tras subir a Drive)
 ```
 
 ---
 
-## 3. ⭐ Motor de Scraping — Funcionamiento Completo
+## 3. Modelos de Datos (MongoDB)
 
-### Orden de Archivos y Responsabilidades
+### 3.1 Instructor (`instructors`)
 
-| # | Archivo | Rol |
-|---|---|---|
-| 1 | `scraperRunner.js` | **Orquestador.** Lee reportes `pending`, decide qué scraper llamar, gestiona reintentos y sube a Drive si tiene éxito. |
-| 2 | `soiScraper.js` | Scraper de **SOI**. Sin captcha. |
-| 3 | `asopagosScraper.js` | Scraper de **Asopagos**. Captcha de imagen → 2Captcha. |
-| 4 | `miPlanillaScraper.js` | Scraper de **Compensar / Mi Planilla**. Captcha numérico → 2Captcha. |
-| 5 | `aportesEnLineaScraper.js` | Scraper de **Aportes en Línea**. reCAPTCHA v2 → 2Captcha. |
+| Campo | Tipo | Requerido | Descripción |
+|-------|------|-----------|-------------|
+| `documentType` | String | ✅ | CC, CE, PA, TI, CD, PE, PT, RC, SC |
+| `documentNumber` | String | ✅ | Número de documento |
+| `fullName` | String | ✅ | Nombre completo |
+| `email` | String | ✅ | Correo electrónico |
+| `documentIssueDate` | Date | ❌ | Fecha de expedición del documento |
+| `supervisorId` | ObjectId | ❌ | Referencia al supervisor asignado |
 
-### Flujo del `scraperRunner.js` (paso a paso)
+> **Índice único:** `{ documentType, documentNumber }`
 
-```
-1. ¿El cron está habilitado? (lee config/cron-status.json)
-   └─ No → Saltar ciclo.
+### 3.2 Supervisor (`supervisors`)
 
-2. ¿Ya hay un ciclo corriendo? (flag isRunnerRunning)
-   └─ Sí → Saltar para evitar colisiones.
+| Campo | Tipo | Requerido | Default | Descripción |
+|-------|------|-----------|---------|-------------|
+| `documentType` | String | ✅ | — | Tipo de documento |
+| `documentNumber` | String | ✅ | — | Número de documento (login) |
+| `documentIssueDate` | String | ❌ | null | Fecha expedición |
+| `name` | String | ✅ | — | Nombre completo |
+| `email` | String | ✅ | — | Correo (único) |
+| `password` | String | ✅ | — | Hash bcrypt |
+| `apiKey` | String | ❌ | null | API Key 2Captcha (encriptada AES) |
+| `mustChangePassword` | Boolean | — | true | Forzar cambio en primer login |
+| `driveFolderUrl` | String | ❌ | null | URL de su carpeta en Drive |
+| `isConfigured` | Boolean | — | false | ¿Perfil configurado? |
+| `role` | String | — | "supervisor" | "admin" o "supervisor" |
+| `resetPasswordToken` | String | ❌ | null | Código de 6 dígitos (reset) |
+| `resetPasswordExpires` | Date | ❌ | null | Expiración del código |
 
-3. Recuperar reportes "atascados"
-   └─ Reportes en "processing" por más de 5 min → volver a "pending".
+> **Índice único:** `{ documentType, documentNumber }`
 
-4. Limpiar archivos temporales viejos en downloads/ (>30 min).
+### 3.3 Report (`reports`)
 
-5. Para CADA plataforma (soi, asopagos, mi_planilla, aportes_en_linea):
-   a. Buscar reportes con status: "pending" (priorizando nuevos sobre reintentos).
-   b. Para CADA reporte:
-      - Marcar como "processing" y sumar 1 intento.
-      - Obtener datos del contratista de MongoDB.
-      - Ejecutar el scraper correspondiente.
-      - ¿Éxito?
-        ├─ Sí → status: "success" → Subir PDF a Drive → status: "downloaded"
-        │        └─ Si Drive falla, queda en "success" con PDF local.
-        └─ No → ¿Intentos < 3?
-                 ├─ Sí → Volver a "pending" (se reintentará).
-                 └─ No → status: "error" (fallo definitivo tras 3 intentos).
+| Campo | Tipo | Requerido | Default | Descripción |
+|-------|------|-----------|---------|-------------|
+| `instructorId` | ObjectId | ✅ | — | Ref → Instructor |
+| `supervisorId` | ObjectId | ✅ | — | Ref → Supervisor |
+| `platform` | String | ✅ | — | soi, aportes_en_linea, asopagos, mi_planilla |
+| `platformData` | Mixed | ✅ | — | Campos específicos de la plataforma |
+| `eps` | String | ✅ | — | EPS del instructor |
+| `reportMonth` | Number | ✅ | — | Mes del periodo |
+| `reportYear` | Number | ✅ | — | Año del periodo |
+| `status` | String | ✅ | "pending" | pending → processing → success → downloaded / error |
+| `errorReason` | String | ❌ | null | Motivo del error |
+| `driveFileId` | String | ❌ | null | ID del archivo en Drive |
+| `driveUrl` | String | ❌ | null | URL pública del PDF |
+| `filePath` | String | ❌ | null | Ruta local temporal |
+| `attempts` | Number | — | 0 | Intentos realizados (máx 3) |
 
-6. Fin del ciclo.
-```
+### 3.4 DriveCredentials (`drivecredentials`)
 
-### Ciclo de Estados de un Reporte
-
-```
-pending ──→ processing ──→ success ──→ downloaded (subido a Drive)
-                │                          
-                ├──→ pending  (reintento 1/3 o 2/3)
-                └──→ error    (3 intentos fallidos)
-```
-
-### Cómo Ejecutar los Scrapers
-
-```bash
-# Opción 1: Automático — Cron programado a las 2:00 AM
-# Se activa solo al iniciar el backend:
-npm run dev
-
-# Opción 2: Manual — Ejecutar un ciclo inmediatamente
-npm run scraper
-# Esto conecta a MongoDB, ejecuta UN ciclo completo, y se desconecta.
-```
-
-### Modo Headless (navegador visible o invisible)
-
-Los scrapers usan Playwright para controlar un navegador. El comportamiento se controla con la variable `HEADLESS` en el `.env`:
-
-```env
-# false = navegador visible — puedes ver el scraper trabajando en pantalla (desarrollo/debug)
-# true  = sin interfaz gráfica — corre en segundo plano (producción/servidor)
-HEADLESS=false
-```
-
-| Entorno | Valor | Qué pasa |
-|---|---|---|
-| Desarrollo (tu PC) | `false` | Se abre una ventana de Chromium y ves cada paso del scraper |
-| Producción (servidor/VPS) | `true` | El scraper corre sin abrir nada, no necesita pantalla |
-| No definida | — | Por defecto es `true` (modo producción) |
-
-> **Nota:** En servidores Linux sin interfaz gráfica, `HEADLESS` debe ser `true` o no definirse. Si se usa `false` en un servidor sin display, el scraper fallará.
-
-### Resolución de CAPTCHAs (2Captcha)
-
-1. El scraper detecta el captcha en pantalla.
-2. Toma una captura de la imagen del captcha.
-3. Envía la imagen a la API de 2Captcha (`TWOCAPTCHA_API_KEY`).
-4. Espera la respuesta (texto resuelto) y lo escribe en el formulario.
-5. Si 2Captcha falla, el reporte se marca para reintento.
-
-### Carpeta `downloads/`
-
-Directorio **temporal**. Los PDFs se guardan aquí al descargarse. Tras subirlos exitosamente a Google Drive, el sistema **los elimina automáticamente**. Las imágenes temporales (captchas) mayores a 30 minutos también se limpian.
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `accessToken` | String | Token de acceso OAuth2 |
+| `refreshToken` | String | Token de refresco OAuth2 |
+| `expiryDate` | Date | Fecha de expiración del access token |
 
 ---
 
-## 4. ☁️ Configuración de Google Drive — Paso a Paso
+## 4. API — Endpoints Completos
 
-El sistema sube automáticamente los certificados a Google Drive con esta estructura:
+### 4.1 Autenticación (`/api/auth`)
+
+| Método | Ruta | Auth | Descripción |
+|--------|------|------|-------------|
+| POST | `/login` | ❌ | Login → JWT (8h) |
+| POST | `/change-password` | 🔒 JWT | Cambio obligatorio de contraseña |
+| POST | `/forgot-password` | ❌ | Envía código de 6 dígitos al correo |
+| POST | `/verify-code` | ❌ | Verifica código y restablece contraseña |
+| POST | `/crear-admin-temporal-xyz123` | ❌ | ⚠️ TEMPORAL: crea admin inicial |
+
+### 4.2 Reportes (`/api/reports`)
+
+| Método | Ruta | Auth | Descripción |
+|--------|------|------|-------------|
+| POST | `/` | ❌ | Crear reporte (público, desde formulario) |
+| GET | `/instructors/lookup` | ❌ | Buscar instructor por documento (autocompletar) |
+
+### 4.3 Dashboard (`/api/dashboard`) — Todas protegidas con JWT
+
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| GET | `/reports` | Lista reportes con filtros y paginación |
+| GET | `/stats` | Estadísticas: conteo por status |
+| POST | `/reports/:id/run` | Ejecutar scraper manualmente para un reporte |
+| DELETE | `/reports/:id` | Eliminar reporte (solo si no está completado) |
+
+### 4.4 Supervisores (`/api/supervisors`)
+
+| Método | Ruta | Auth | Descripción |
+|--------|------|------|-------------|
+| GET | `/list` | ❌ | Lista pública (nombre + ID) para select |
+| GET | `/profile` | 🔒 | Perfil completo del supervisor logueado |
+| GET | `/profile/apikey` | 🔒 | API Key desencriptada |
+| GET | `/profile/drive-link` | 🔒 | URL de la carpeta de Drive del supervisor |
+| PUT | `/profile` | 🔒 | Actualizar API Key (valida con 2Captcha) |
+| GET | `/admin/all` | 🔒 Admin | Lista todos los supervisores |
+| POST | `/admin` | 🔒 Admin | Crear supervisor |
+| PUT | `/admin/:id` | 🔒 Admin | Editar supervisor |
+| DELETE | `/admin/:id` | 🔒 Admin | Eliminar supervisor |
+
+### 4.5 Google Drive (`/api/drive`)
+
+| Método | Ruta | Auth | Descripción |
+|--------|------|------|-------------|
+| GET | `/auth/url` | 🔒 | Genera URL de autorización OAuth2 |
+| GET | `/auth/callback` | ❌ | Callback de Google (redirect) |
+| POST | `/auth/callback` | ❌ | Callback alternativo (frontend) |
+| GET | `/auth/status` | 🔒 | Estado de las credenciales |
+| DELETE | `/auth/revoke` | 🔒 | Revocar credenciales guardadas |
+
+### 4.6 Sistema (`/api/system`)
+
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| GET | `/cron/status` | Estado del cron (habilitado/deshabilitado) |
+| POST | `/cron/toggle` | Activar/desactivar cron `{ enabled: bool }` |
+
+### 4.7 Otros
+
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| GET | `/api/health` | Health check del servidor |
+| GET | `/api-docs` | Swagger UI (documentación interactiva) |
+
+---
+
+## 5. Motor de Scraping
+
+### 5.1 Scrapers por Plataforma
+
+| Plataforma | Archivo | Captcha | Campos `platformData` |
+|------------|---------|---------|----------------------|
+| SOI | `soiScraper.js` | Ninguno | `mes`, `anio` |
+| Asopagos | `asopagosScraper.js` | Imagen → 2Captcha | `mes`, `anio` |
+| Compensar | `miPlanillaScraper.js` | Numérico → 2Captcha | `numeroPlanilla`, `mes`, `anio`, `valorPagado`, `fechaPago` |
+| Aportes en Línea | `aportesEnLineaScraper.js` | reCAPTCHA v2 → 2Captcha | `anio`, `mes` |
+
+### 5.2 Flujo del scraperRunner.js
 
 ```
-📁 SISTEMA_AUTOMATIZACION_CERTIFICADOS   ← Carpeta raíz (se crea sola si no existe)
-├── 📁 NOMBRE DEL SUPERVISOR
-│   ├── 📁 2026                          ← Año
-│   │   ├── 📁 ENERO                     ← Mes
-│   │   │   ├── 📄 barrera_ballesteros_monica_yaneth.pdf
-│   │   │   └── 📄 martinez_lopez_juan_carlos.pdf
-│   │   └── 📁 FEBRERO
-│   └── 📁 2025
-└── 📁 OTRO SUPERVISOR
+1. ¿Cron habilitado? → No → Saltar
+2. ¿Ya hay ciclo corriendo? → Sí → Saltar
+3. Recuperar reportes "atascados" (processing > 5 min → pending)
+4. Limpiar archivos temporales (downloads/ > 30 min)
+5. Por cada plataforma:
+   a. Buscar reportes pending (nuevos primero, reintentos después)
+   b. Por cada reporte:
+      - Marcar processing, sumar intento
+      - Ejecutar scraper
+      - Éxito → success → subir a Drive → downloaded + correo
+      - Fallo → intentos < 3 ? pending : error
+6. Fin del ciclo
 ```
 
-### Variables necesarias en el `.env` del backend
+### 5.3 Ciclo de Estados
 
 ```
-GOOGLE_OAUTH_CLIENT_ID=tu_client_id.apps.googleusercontent.com
-GOOGLE_OAUTH_CLIENT_SECRET=GOCSPX-tu_client_secret
-GOOGLE_OAUTH_REFRESH_TOKEN=1//tu_refresh_token
-GOOGLE_DRIVE_FOLDER_ID=id_carpeta_raiz   ← (opcional, se crea automáticamente)
-
-HEADLESS=false   ← false=visible (desarrollo) | true=invisible (producción)
+pending ──► processing ──► success ──► downloaded (subido a Drive + correo enviado)
+                │
+                ├──► pending  (reintento, intentos < 3)
+                └──► error    (3 intentos fallidos)
 ```
 
-### Prerequisito: Configurar la pantalla de consentimiento OAuth
+### 5.4 humanBehavior.js
 
-Antes de crear credenciales, Google requiere configurar la pantalla de consentimiento. Si ya la tienes configurada, puedes saltarte este paso.
+Utilidades anti-detección de bots:
+- `randomDelay(min, max)` — pausa aleatoria
+- `humanType(page, selector, text)` — tipeo carácter por carácter
+- `humanClick(page, selector)` — click con pausa
+- `humanSelect(page, selector, value)` — seleccionar opción con pausa
 
-1. Ve a **"APIs y Servicios"** → **"Pantalla de consentimiento de OAuth"**.
-2. Tipo de usuario: **Externo** → clic en **"Crear"**.
-3. Llena los campos obligatorios: nombre de la app y correo de soporte.
-4. En **"Scopes"**, no necesitas agregar nada por ahora.
-5. En **"Usuarios de prueba"**, agrega el correo de la cuenta de Google que usará la app.
-6. Guarda y continúa.
+---
 
-### Paso 1: Crear proyecto en Google Cloud
+## 6. Google Drive — Integración
 
-1. Ve a [Google Cloud Console](https://console.cloud.google.com).
-2. Crea un proyecto nuevo (o usa uno existente).
-3. Ve a **"APIs y Servicios"** → **"Biblioteca"**.
-4. Busca **"Google Drive API"** y haz clic en **"Habilitar"**.
+### 6.1 Estructura de Carpetas
 
-### Paso 2: Crear credenciales OAuth2
+```
+📁 [GOOGLE_DRIVE_FOLDER_ID o root]
+└── 📁 PLANILLAS
+    ├── 📁 NOMBRE DEL SUPERVISOR (mayúsculas)
+    │   ├── 📁 2026
+    │   │   ├── 📁 ENERO
+    │   │   │   └── 📄 apellido1_apellido2_nombre1_nombre2.pdf
+    │   │   └── 📁 FEBRERO
+    │   └── 📁 2025
+    └── 📁 OTRO SUPERVISOR
+```
 
-1. Ve a **"APIs y Servicios"** → **"Credenciales"**.
-2. Clic en **"Crear credenciales"** → **"ID de cliente OAuth 2.0"**.
-3. Tipo de aplicación: **"App de escritorio"** → clic en **"Crear"**.
-4. Copia el **Client ID** y el **Client Secret** al archivo `.env`:
+### 6.2 OAuth2 Dinámico
+
+`driveAuthController.js` detecta automáticamente el host de la petición para construir la URL de callback:
+
+```js
+const getRedirectUri = (req) => {
+    if (process.env.NODE_ENV === "production") {
+        const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'https';
+        const host = req.headers['x-forwarded-host'] || req.get('host');
+        return `${protocol}://${host}/api/drive/auth/callback`;
+    }
+    return "http://localhost:5173/api/drive/auth/callback";
+};
+```
+
+> **No se necesita `FRONTEND_URL`.** El sistema es agnóstico al dominio.
+
+### 6.3 Tokens en Base de Datos
+
+Los tokens OAuth2 se guardan en la colección `DriveCredentials` (no en `.env`). El `accessToken` se renueva automáticamente cuando expira usando el `refreshToken`.
+
+---
+
+## 7. Sistema de Correos (Nodemailer)
+
+Se envían correos en los siguientes eventos:
+
+| Evento | Destinatario | Asunto |
+|--------|-------------|--------|
+| Reporte creado | Instructor | "Solicitud de certificado recibida" |
+| Certificado listo | Instructor | "Certificado listo" + enlace Drive |
+| Error de API Key | Supervisor | "Alerta: Problema con la API Key de 2Captcha" |
+| Forgot password | Supervisor | "Código de Recuperación" (6 dígitos) |
+
+Todos usan plantilla HTML institucional con logo SENA embebido (CID).
+
+**Configuración SMTP:** Gmail (puerto 465, SSL). Variables: `MAIL_USER`, `MAIL_PASS`.
+
+---
+
+## 8. Seguridad
+
+| Mecanismo | Implementación |
+|-----------|---------------|
+| **Autenticación** | JWT (8h) en header `Authorization: Bearer` |
+| **Autorización** | `authMiddleware` + `roleMiddleware(["admin"])` |
+| **Contraseñas** | bcrypt (salt 10 rounds) |
+| **API Keys** | AES-256-CBC (encrypt/decrypt) con `CRYPTO_KEY` |
+| **CORS** | Orígenes específicos permitidos |
+| **Primer login** | `mustChangePassword: true` → fuerza cambio |
+| **Reset password** | Código 6 dígitos por email (1h expiración) |
+
+---
+
+## 9. Frontend — Estructura de Carpetas
+
+```
+frontEnd/
+├── index.html               # Punto de entrada HTML
+├── vite.config.js            # Configuración Vite + Quasar plugin
+├── package.json              # Dependencias frontend
+├── .env / .env-example       # VITE_API_URL
+│
+└── src/
+    ├── main.js               # Inicialización: Vue + Pinia + Quasar + Router
+    ├── App.vue               # Componente raíz (<router-view>)
+    ├── style.css              # Estilos globales
+    ├── quasar-variables.sass  # Variables de tema Quasar
+    │
+    ├── layouts/
+    │   └── MainLayout.vue     # Layout con header verde SENA + transiciones
+    │
+    ├── views/
+    │   ├── HomeView.vue             # Página principal con selección de plataforma
+    │   ├── InstructorView.vue       # Formulario de planilla (Aportes en Línea / Compensar)
+    │   ├── LoginView.vue            # Login de supervisores
+    │   ├── SupervisorView.vue       # Dashboard del supervisor + reportes
+    │   ├── ChangePasswordView.vue   # Cambio obligatorio de contraseña
+    │   ├── ForgotPasswordView.vue   # Recuperación de contraseña (código)
+    │   └── CardTest.vue             # Vista de prueba para tarjetas
+    │
+    ├── components/
+    │   ├── UnifiedForm.vue          # Formulario genérico (SOI, Asopagos)
+    │   ├── FormModal.vue            # Modal reutilizable para formularios
+    │   ├── AdminPanel.vue           # Panel de administración (CRUD supervisores)
+    │   └── DriveAuthPanel.vue       # Panel de conexión Google Drive
+    │
+    ├── store/
+    │   └── auth.js             # Pinia store: token JWT (localStorage)
+    │
+    ├── plugins/
+    │   ├── axios.js            # Instancia Axios con interceptor Bearer
+    │   └── notify.js           # Sistema de notificaciones reactivo
+    │
+    ├── services/
+    │   └── apiClient.js        # Wrapper: getData, postData, putData, deleteData
+    │
+    ├── routes/
+    │   └── routes.js           # Vue Router + navigation guards
+    │
+    ├── static/
+    │   └── formConfigs.js      # Configuración de campos por plataforma
+    │
+    └── assets/
+        ├── logo-sena.png       # Logo SENA
+        ├── card.png            # Imagen decorativa
+        ├── ejemplo.png         # Imagen de ejemplo
+        └── platforms/          # Íconos de plataformas
+```
+
+### 9.1 Rutas del Frontend
+
+| Ruta | Vista | Auth | Descripción |
+|------|-------|------|-------------|
+| `/` | HomeView | ❌ | Selección de plataforma |
+| `/instructor` | InstructorView | ❌ | Formulario Aportes en Línea / Compensar |
+| `/form/:platform` | UnifiedForm | ❌ | Formulario genérico (SOI, Asopagos) |
+| `/login` | LoginView | Solo guests | Login supervisor |
+| `/forgot-password` | ForgotPasswordView | Solo guests | Recuperar contraseña |
+| `/supervisor` | SupervisorView | 🔒 | Dashboard del supervisor |
+| `/change-password` | ChangePasswordView | 🔒 | Cambio obligatorio de contraseña |
+
+### 9.2 Navigation Guards
+
+- **`requiresAuth`** → sin token redirige a `/login`
+- **`guestOnly`** → con token redirige a `/supervisor`
+- **`mustChangePassword`** → fuerza redirección a `/change-password`
+
+### 9.3 Dependencias Frontend
+
+| Paquete | Uso |
+|---------|-----|
+| `vue` 3.5 | Framework UI |
+| `quasar` 2.18 | Componentes UI (inputs, tablas, notificaciones, diálogos) |
+| `pinia` 3.0 | State management |
+| `vue-router` 5.0 | Enrutamiento SPA |
+| `axios` 1.13 | HTTP client |
+| `xlsx` 0.18 | Exportar reportes a Excel |
+| `html2canvas` 1.4 | Captura de pantalla de elementos |
+| `sass` 1.97 | Preprocesador CSS para Quasar |
+
+---
+
+## 10. Variables de Entorno
+
+### 10.1 Backend (`.env`)
 
 ```env
-GOOGLE_OAUTH_CLIENT_ID=391060...apps.googleusercontent.com
+# Base de datos
+MONGO_URI=mongodb+srv://...
+
+# Servidor
+PORT=3000
+
+# Autenticación
+JWT_SECRET=clave_secreta_segura
+
+# Google Drive OAuth2
+GOOGLE_OAUTH_CLIENT_ID=...apps.googleusercontent.com
 GOOGLE_OAUTH_CLIENT_SECRET=GOCSPX-...
+GOOGLE_DRIVE_FOLDER_ID=              # Opcional, usa root si vacío
+
+# Encriptación de API Keys
+CRYPTO_KEY=clave_de_32_caracteres_aqui
+
+# Scrapers
+HEADLESS=false                       # false=visible, true=producción
+
+# Correo
+MAIL_USER=correo@gmail.com
+MAIL_PASS=contraseña_de_aplicación
 ```
 
-> El permiso que se solicitará al usuario es `https://www.googleapis.com/auth/drive.file`. Este scope solo permite acceder a los archivos que la propia app crea — no a todo tu Drive.
+### 10.2 Frontend (`.env`)
 
-### Paso 3: Generar el Refresh Token
-
-El Refresh Token permite al sistema acceder a tu Drive sin que tengas que iniciar sesión cada vez. El script que lo genera ya viene incluido en el repositorio en `backEnd/utils/setupDriveAuth.js`.
-
-```bash
-cd backEnd
-node utils/setupDriveAuth.js
+```env
+VITE_API_URL=http://localhost:3000/api
 ```
 
-El script hará lo siguiente:
-
-1. Mostrará una URL de autorización en la consola.
-2. Abre esa URL en tu navegador e inicia sesión con la cuenta de Google donde se guardarán los archivos.
-3. Autoriza el acceso cuando Google lo solicite.
-4. El script guarda el refresh token automáticamente en el `.env`.
-
-Salida esperada:
-
-```
-🔧 Configuración de Google Drive OAuth2
-
-🔗 Abre esta URL en tu navegador:
-   https://accounts.google.com/o/oauth2/v2/auth?...
-
-⏳ Esperando autorización...
-
-✅ Autorización exitosa.
-📝 Refresh token guardado en .env
-```
-
-### Paso 4: Carpeta Raíz (Opcional)
-
-Si ya tienes una carpeta en Drive donde quieres que se guarden los certificados:
-
-1. Abre esa carpeta en Google Drive.
-2. Copia el ID de la URL: `https://drive.google.com/drive/folders/ESTE_ES_EL_ID`
-3. Pégalo en el `.env`:
-   ```
-   GOOGLE_DRIVE_FOLDER_ID=19eE4cFG_FFPeXAaUW93K5UQ0KeWG8GNX
-   ```
-
-Si lo **dejas vacío**, el sistema creará automáticamente una carpeta llamada `SISTEMA_AUTOMATIZACION_CERTIFICADOS` en la raíz de tu Drive y actualizará el `.env` con el ID nuevo.
-
-> ⚠️ **IMPORTANTE:** Si la app está en modo **"Pruebas"**, el refresh token **expira cada 7 días**. Para que sea permanente, publícala: ve a "Pantalla de consentimiento" → "Publicar aplicación".
-
-### Errores comunes
-
-| Error | Causa | Solución |
-|---|---|---|
-| `redirect_uri_mismatch` | El URI de redirección no coincide | Verifica que el tipo de app sea **"App de escritorio"**, no web |
-| `invalid_client` | Client ID o Secret incorrectos | Vuelve a copiar las credenciales en el `.env` |
-| `Token has been expired or revoked` | Refresh token expirado (modo pruebas) | Ejecuta de nuevo `setupDriveAuth.js` o publica la app |
-| `Access blocked` | Tu correo no está en usuarios de prueba | Agrégalo en la pantalla de consentimiento |
-
-### Flujo Automático de Subida
-
-1. El `scraperRunner.js` descarga un PDF exitosamente.
-2. Llama a `driveService.js` → `uploadToDrive()`.
-3. `driveService` se autentica con las credenciales del `.env`.
-4. Valida que la carpeta raíz exista (si no, la crea).
-5. Busca/Crea la carpeta del **Supervisor** → **Año** → **Mes**.
-6. Sube el PDF con nombre formateado: `apellido1_apellido2_nombre1_nombre2.pdf`.
-7. Guarda `driveFileId` y `driveUrl` en el reporte de MongoDB.
-8. Elimina el PDF local de `downloads/`.
+> En producción (Docker/Coolify), el frontend se sirve como estático desde el backend, por lo que `VITE_API_URL` apunta al mismo dominio.
 
 ---
 
-## 5. 👤 Gestión de Supervisores
-
-Los supervisores son las cuentas que acceden al panel administrativo.
-**No hay registro público** — se crean manualmente desde la terminal.
-
-### Crear un Supervisor
+## 11. Scripts de Terminal
 
 ```bash
-cd backEnd
-node scripts/addSupervisor.js "Nombre Completo" "NúmeroCédula" "contraseña"
-```
+# ── Backend ──
+npm run dev                    # Iniciar con nodemon (desarrollo)
+npm start                      # Iniciar en producción
+npm run scraper                # Ejecutar un ciclo de scrapers manualmente
 
-**Ejemplo:**
-```bash
-node scripts/addSupervisor.js "Benito Antonio Martinez Ocasio" "15151515" "123456"
-```
-
-Resultado:
-```
-✅ Conectado a MongoDB
-===========================================
-✅ Supervisor creado exitosamente:
-👤 Nombre: Benito Antonio Martinez Ocasio
-🆔 Documento: 15151515
-===========================================
-```
-
-### Ver Supervisores Existentes
-
-```bash
+# ── Scripts de gestión ──
+node scripts/addSupervisor.js "Nombre" "CC" "12345" "email@x.com" "pass" ["apiKey"]
+node scripts/createAdmin.js "Nombre" "CC" "12345" "email@x.com" "pass"
 node scripts/checkSupervisors.js
-```
 
-### Login del Supervisor
-
-- **URL:** `http://localhost:5173/login`
-- **Campos:** Número de documento + Contraseña
-- **Resultado:** Token JWT que da acceso al dashboard (`/supervisor`)
-
----
-
-## 6. Automatización (Cron Job)
-
-| Aspecto | Detalle |
-|---|---|
-| **Horario** | Todos los días a las **2:00 AM** |
-| **Intentos** | Máximo **3** por reporte |
-| **Prioridad** | Reportes nuevos (0 intentos) primero; reintentos al final de la cola |
-| **Recuperación** | Reportes "atascados" en `processing` por más de 5 min → se devuelven a `pending` |
-| **Control** | Se puede habilitar/deshabilitar vía API (persiste en `config/cron-status.json`) |
-
-### Control del Cron vía API
-
-```bash
-# Ver estado
-curl http://localhost:3000/api/system/cron/status
-
-# Desactivar
-curl -X POST http://localhost:3000/api/system/cron/toggle \
-  -H "Content-Type: application/json" \
-  -d '{"enabled": false}'
-
-# Activar
-curl -X POST http://localhost:3000/api/system/cron/toggle \
-  -H "Content-Type: application/json" \
-  -d '{"enabled": true}'
+# ── Frontend ──
+npm run dev                    # Vite dev server (localhost:5173)
+npm run build                  # Build de producción (dist/)
+npm run preview                # Preview del build
 ```
 
 ---
 
-## 7. 🚀 Guía Rápida para Pruebas
+## 12. Despliegue (Coolify / Docker)
 
-### Requisitos Previos
-- Node.js (v18+)
-- MongoDB Atlas (o local)
-- Cuenta de Google con Google Drive
-- API Key de 2Captcha (para plataformas con captcha)
+1. El **frontend** se compila con `npm run build` generando la carpeta `dist/`.
+2. El **backend** sirve `dist/` como archivos estáticos desde `../public`.
+3. **No se necesita `FRONTEND_URL`**: las URLs de redirección OAuth2 se detectan automáticamente desde los headers de la petición (`x-forwarded-proto`, `x-forwarded-host`).
+4. Configurar variables de entorno en el panel de Coolify.
+5. El backend escucha en `PORT` (default 3000).
 
-### Pasos
+---
+
+## 13. Dependencias Backend
+
+| Paquete | Versión | Uso |
+|---------|---------|-----|
+| `express` | 5.2 | Servidor HTTP |
+| `mongoose` | 9.2 | ODM para MongoDB |
+| `bcryptjs` | 3.0 | Hash de contraseñas |
+| `jsonwebtoken` | 9.0 | Generación/verificación JWT |
+| `cors` | 2.8 | Middleware CORS |
+| `morgan` | 1.10 | Logger HTTP |
+| `dotenv` | 17.3 | Variables de entorno |
+| `express-validator` | 7.3 | Validación de requests |
+| `googleapis` | 171.4 | Google Drive API v3 |
+| `playwright` | 1.60 | Automatización de navegador |
+| `@2captcha/captcha-solver` | 1.3 | Resolución de CAPTCHAs |
+| `nodemailer` | 8.0 | Envío de correos SMTP |
+| `node-cron` | 4.2 | Programación de tareas |
+| `swagger-ui-express` | 5.0 | Documentación API |
+| `yamljs` | 0.3 | Parser YAML (Swagger) |
+| `adm-zip` | 0.5 | Manejo de archivos ZIP |
+
+---
+
+## 14. Guía Rápida para Pruebas
 
 ```bash
 # 1. Clonar e instalar
-git clone https://github.com/camilo2501roco/automatizacion-certificados.git
-cd automatizacion-certificados
-
+git clone <repo>
 cd backEnd && npm install
 cd ../frontEnd && npm install
 
-# 2. Instalar navegadores Playwright (necesario para los scrapers)
-cd ../backEnd
-npx playwright install
+# 2. Instalar navegadores Playwright
+cd ../backEnd && npx playwright install
 
 # 3. Configurar variables de entorno
-cp .env-example .env          # ← Editar con credenciales reales
-cd ../frontEnd
-cp .env-example .env          # ← Ya viene listo para desarrollo local
+cp .env-example .env   # Editar con credenciales reales
 
-# 4. Crear un supervisor de prueba
-cd ../backEnd
-node scripts/addSupervisor.js "Tester" "99999999" "test123"
+# 4. Crear admin y supervisor de prueba
+node scripts/createAdmin.js "Admin" "CC" "99999999" "admin@test.com" "admin123"
+node scripts/addSupervisor.js "Supervisor Test" "CC" "88888888" "sup@test.com" "test123"
 
-# 5. Iniciar el proyecto
-# Terminal 1:
-cd backEnd && npm run dev     # ← Backend en http://localhost:3000
-
-# Terminal 2:
-cd frontEnd && npm run dev    # ← Frontend en http://localhost:5173
+# 5. Iniciar
+# Terminal 1: cd backEnd && npm run dev
+# Terminal 2: cd frontEnd && npm run dev
 
 # 6. Probar
-# - Ir a http://localhost:5173 → Enviar un formulario
-# - Ir a http://localhost:5173/login → Entrar como supervisor (99999999 / test123)
-# - Ejecutar scraper manual: npm run scraper
-# - Ver Swagger: http://localhost:3000/api-docs
+# → http://localhost:5173          (formulario público)
+# → http://localhost:5173/login    (login supervisor: CC / 88888888 / test123)
+# → http://localhost:3000/api-docs (Swagger)
+# → npm run scraper               (ejecutar scrapers manualmente)
 ```
-
----
-
-## 8. Colecciones de MongoDB
-
-### Supervisores (`supervisors`)
-| Campo | Tipo | Descripción |
-|---|---|---|
-| `name` | String | Nombre completo |
-| `documentNumber` | String | Número de cédula (se usa para login) |
-| `password` | String | Hash bcrypt |
-
-### Contratistas (`contractors`)
-| Campo | Tipo | Descripción |
-|---|---|---|
-| `documentType` | String | CC, CE, PA, TI |
-| `documentNumber` | String | Número de documento |
-| `fullName` | String | Nombre completo |
-| `eps` | String | EPS del contratista |
-
-### Reportes (`reports`)
-| Campo | Tipo | Descripción |
-|---|---|---|
-| `contractorId` | ObjectId | Referencia al contratista |
-| `supervisorId` | ObjectId | Referencia al supervisor |
-| `platform` | String | soi, asopagos, mi_planilla, aportes_en_linea |
-| `platformData` | Object | JSON con campos específicos de la plataforma |
-| `status` | String | pending, processing, success, downloaded, error |
-| `attempts` | Number | Intentos realizados (máximo 3) |
-| `errorReason` | String | Motivo del error (si aplica) |
-| `filePath` | String | Ruta del PDF local (temporal) |
-| `driveFileId` | String | ID del archivo en Google Drive |
-| `driveUrl` | String | URL para ver el PDF en Drive |
-| `reportMonth` | Number | Mes del periodo consultado |
-| `reportYear` | Number | Año del periodo consultado |
-
----
-
-## 9. Comandos Rápidos
-
-| Comando | Ubicación | Descripción |
-|---|---|---|
-| `npm run dev` | backEnd/ | Iniciar backend con auto-reload |
-| `npm start` | backEnd/ | Iniciar en producción |
-| `npm run scraper` | backEnd/ | Ejecutar scrapers manualmente (1 ciclo) |
-| `node scripts/addSupervisor.js "N" "D" "P"` | backEnd/ | Crear supervisor |
-| `node scripts/checkSupervisors.js` | backEnd/ | Listar supervisores |
-| `node utils/setupDriveAuth.js` | backEnd/ | Generar refresh token de Google Drive |
-| `npm run dev` | frontEnd/ | Iniciar frontend Vite |
-| `npm run build` | frontEnd/ | Generar build de producción |
