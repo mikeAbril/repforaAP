@@ -60,7 +60,12 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // --- Servir archivos estáticos del frontend ---
-const publicPath = path.join(__dirname, "../public");
+// Soportar tanto la estructura de Docker (./public) como local (../public)
+let publicPath = path.join(__dirname, "public");
+if (!fs.existsSync(publicPath)) {
+  publicPath = path.join(__dirname, "../public");
+}
+
 if (fs.existsSync(publicPath)) {
   app.use(express.static(publicPath));
 }
