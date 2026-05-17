@@ -158,20 +158,21 @@ export const forgotPassword = async (req, res, next) => {
         supervisor.resetPasswordExpires = resetExpires;
         await supervisor.save();
 
-        // Enviar correo con el código
         const htmlContent = `
-            <div style="text-align: center;">
-                <h2 style="color: #318335; margin-bottom: 20px; font-size: 24px;">Código de Recuperación</h2>
-                <p style="color: #4b5563; margin-bottom: 30px; font-size: 16px;">
-                    Hola <strong>${supervisor.name}</strong>,<br><br>
+            <div style="text-align: center; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+                <h2 style="color: #318335; margin-top: 0; margin-bottom: 15px; font-size: 20px; line-height: 1.3; font-weight: 700; letter-spacing: -0.5px;">
+                    Código de Recuperación
+                </h2>
+                <p style="color: #4b5563; margin-bottom: 25px; font-size: 15px; line-height: 1.6;">
+                    Hola <strong>${supervisor.name}</strong>,<br>
                     Has solicitado restablecer tu contraseña. Usa el siguiente código:
                 </p>
-                <div style="background-color: #f3f4f6; padding: 20px 40px; border-radius: 8px; display: inline-block; margin: 20px 0;">
-                    <span style="font-size: 36px; font-weight: bold; color: #318335; letter-spacing: 8px;">${resetCode}</span>
+                <div style="margin: 20px 0; text-align: center;">
+                    <code style="font-family: SFMono-Regular, Consolas, 'Liberation Mono', Menlo, Courier, monospace; font-size: 26px; font-weight: 700; color: #318335; letter-spacing: 5px; background-color: #f3f4f6; border: 1px dashed #d1d5db; padding: 10px 20px; border-radius: 8px; display: inline-block; user-select: all; -webkit-user-select: all; -moz-user-select: all; -ms-user-select: all; cursor: pointer;" title="Haz doble clic para copiar">${resetCode}</code>
                 </div>
-                <p style="color: #6b7280; margin-top: 30px; font-size: 14px;">
+                <p style="color: #6b7280; margin-top: 25px; font-size: 13px; line-height: 1.5;">
                     Este código expirará en 1 hora.<br>
-                    Si no solicitaste este cambio, puedes ignorar este correo.
+                    Si no solicitaste este cambio, puedes ignorar este correo con total tranquilidad.
                 </p>
             </div>
         `;

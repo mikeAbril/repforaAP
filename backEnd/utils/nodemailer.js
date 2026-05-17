@@ -34,16 +34,16 @@ export const sendEmail = async (to, subject, htmlContent) => {
             to,
             subject,
             html: `
-                <div style="background-color: #ffffff; border-radius: 20px; overflow: hidden; padding: 50px 20px; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #212529; min-height: 100%;">
-                    <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); border: 1px solid rgba(0,0,0,0.05);">
+                <div style="background-color: #f9fafb; padding: 25px 12px; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #212529; min-height: 100%;">
+                    <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06); border: 1px solid #e5e7eb;">
                         
                         <!-- Header Institucional -->
-                        <div style="background-color: #ffffff; padding: 40px; text-align: center; border-bottom: 6px solid #318335;">
-                            <img src="cid:logoSena" alt="SENA" style="width: 120px; height: auto;">
+                        <div style="background-color: #ffffff; padding: 25px 15px; text-align: center; border-bottom: 6px solid #318335;">
+                            <img src="cid:logoSena" alt="SENA" style="width: 100px; height: auto;">
                         </div>
 
                         <!-- Cuerpo del Mensaje -->
-                        <div style="padding: 45px 40px; line-height: 1.8; font-size: 17px; color: #374151;">
+                        <div style="padding: 30px 20px; line-height: 1.6; font-size: 15px; color: #374151;">
                             ${htmlContent}
                         </div>
 
