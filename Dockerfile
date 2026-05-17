@@ -1,5 +1,5 @@
 # ===================== STAGE 1: Frontend Build =====================
-FROM node:20-slim AS frontend-builder
+FROM node:20-alpine AS frontend-builder
 
 WORKDIR /app/frontend
 
@@ -20,15 +20,26 @@ ENV VITE_API_URL=/api
 RUN npm run build
 
 # ===================== STAGE 2: Backend + Runtime =====================
-# Usamos playwright's imagen oficial que ya trae Chromium y todas las deps
-FROM mcr.microsoft.com/playwright:v1.52.0-noble
-
-# Instalar Node.js 20 (la imagen de Playwright trae una versión, pero aseguramos la correcta)
-# La imagen de Playwright ya trae Node.js, así que solo necesitamos dumb-init
-RUN apt-get update && apt-get install -y --no-install-recommends dumb-init && \
-    rm -rf /var/lib/apt/lists/*
+FROM node:20-alpine
 
 WORKDIR /app
+
+# Instalar Chromium y dependencias necesarias para que Playwright funcione en Alpine
+RUN apk add --no-cache \
+    chromium \
+    nss \
+    freetype \
+    harfbuzz \
+    ca-certificates \
+    ttf-freefont \
+    dumb-init
+
+# Configurar Playwright para NO descargar navegadores y usar el Chromium del sistema
+ENV PLAYWRIGHT_BROWSERS_PATH=0
+ENV CHROMIUM_PATH=/usr/bin/chromium-browser
+ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+ENV NODE_ENV=production
+ENV HEADLESS=true
 
 # Copiar package files del backend
 COPY backEnd/package*.json ./
@@ -44,11 +55,6 @@ RUN mkdir -p ./downloads ./public
 
 # Copiar build del frontend al directorio public
 COPY --from=frontend-builder /app/frontend/dist ./public
-
-# Indicar a Playwright que use los navegadores del sistema (ya instalados en la imagen)
-ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
-ENV NODE_ENV=production
-ENV HEADLESS=true
 
 # Exponer puerto
 EXPOSE 3000
