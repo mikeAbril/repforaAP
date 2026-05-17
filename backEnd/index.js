@@ -103,11 +103,12 @@ app.get("/api/health", (_req, res) => {
 // Cualquier ruta que NO sea /api/* se redirige al index.html del frontend.
 const indexPath = path.join(publicPath, "index.html");
 if (fs.existsSync(indexPath)) {
-  app.get("*", (req, res) => {
+  app.get("*", (req, res, next) => {
     // No interceptar rutas de API ni archivos estáticos que existan
     if (!req.path.startsWith("/api")) {
       return res.sendFile(indexPath);
     }
+    next();
   });
 }
 
@@ -121,6 +122,14 @@ app.use((err, _req, res, _next) => {
   });
 });
 
+// Capturar errores no controlados para evitar que el servidor crashee en silencio
+process.on("uncaughtException", (err) => {
+  console.error("CRÍTICO - Uncaught Exception:", err);
+});
+process.on("unhandledRejection", (reason, promise) => {
+  console.error("CRÍTICO - Unhandled Rejection:", promise, "razón:", reason);
+});
+
 // --- Conexión a DB e inicio del servidor ---
 const startServer = async () => {
   await connectDB();
@@ -128,8 +137,9 @@ const startServer = async () => {
   // Iniciar cron de scrapers (programado diariamente)
   startScraperCron();
 
-  app.listen(PORT, () => {
-    console.log(`🟢 Servidor corriendo en http://localhost:${PORT}`);
+  // Escuchar en 0.0.0.0 es crucial en Docker/Coolify para que el proxy pueda enrutar el tráfico
+  app.listen(PORT, "0.0.0.0", () => {
+    console.log(`🟢 Servidor corriendo en http://0.0.0.0:${PORT}`);
   });
 };
 
