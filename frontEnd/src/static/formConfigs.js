@@ -134,12 +134,11 @@ export const formConfigs = {
       },
 
       {
-        title: 'Asignación de Supervisor',
+        title: 'Asignación de Apoyo a Supervision',
         icon: 'sym_o_supervised_user_circle',
         fields: [
           { 
-            name: 'supervisorId', 
-            label: 'Seleccione su Supervisor', 
+            name: 'supervisorId',  
             type: 'select', 
             options: 'supervisors', 
             col: 12 
@@ -184,12 +183,11 @@ export const formConfigs = {
       },
 
       {
-        title: 'Asignación de Supervisor',
+        title: 'Asignación de Apoyo a Supervision',
         icon: 'sym_o_supervised_user_circle',
         fields: [
           { 
             name: 'supervisorId', 
-            label: 'Seleccione su Supervisor', 
             type: 'select', 
             options: 'supervisors', 
             col: 12 
@@ -240,12 +238,11 @@ export const formConfigs = {
       },
 
       {
-        title: 'Asignación de Supervisor',
+        title: 'Asignación de Apoyo a Supervision',
         icon: 'sym_o_supervised_user_circle',
         fields: [
           { 
             name: 'supervisorId', 
-            label: 'Seleccione su Supervisor', 
             type: 'select', 
             options: 'supervisors', 
             col: 12 
@@ -286,12 +283,11 @@ export const formConfigs = {
       },
 
       {
-        title: 'Asignación de Supervisor',
+        title: 'Asignación de Apoyo a Supervision',
         icon: 'sym_o_supervised_user_circle',
         fields: [
           { 
             name: 'supervisorId', 
-            label: 'Seleccione su Supervisor', 
             type: 'select', 
             options: 'supervisors', 
             col: 12 

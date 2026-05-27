@@ -237,7 +237,7 @@ const placeholderMap = {
   eps: 'Selecciona tu EPS...',
   mes: 'Selecciona el mes...',
   anio: 'Selecciona el año...',
-  supervisorId: 'Selecciona un supervisor...',
+  supervisorId: 'Selecciona...',
   numeroPlanilla: 'Escribe el número de planilla...',
   valorPagado: 'Escribe el valor total pagado...',
   fechaPago: 'Selecciona la fecha de pago...',
