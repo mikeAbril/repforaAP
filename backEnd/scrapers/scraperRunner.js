@@ -168,13 +168,28 @@ const processPendingReports = async (platform) => {
                 platformData: current.platformData,
             };
 
+            const isLastAttempt = (current.attempts >= 3);
+
             // Ejecutar scraper
-            const result = await scraperFn(reportData, DOWNLOADS_DIR);
+            const result = await scraperFn(reportData, DOWNLOADS_DIR, isLastAttempt);
 
             if (result.success) {
                 current.status = "success";
                 current.filePath = result.filePath;
                 current.errorReason = null;
+                
+                // Borrar captura de error anterior si existe
+                if (current.errorScreenshot) {
+                    const oldPath = path.join(DOWNLOADS_DIR, "..", current.errorScreenshot);
+                    if (fs.existsSync(oldPath)) {
+                        try {
+                            fs.unlinkSync(oldPath);
+                        } catch (e) {
+                            console.error(`⚠️ No se pudo borrar la captura de error vieja: ${e.message}`);
+                        }
+                    }
+                    current.errorScreenshot = null;
+                }
                 console.log(`✅ Reporte ${current._id} — PDF descargado`);
 
                 // Subir a Google Drive
@@ -255,10 +270,12 @@ const processPendingReports = async (platform) => {
                 if (current.attempts < 3) {
                     current.status = "pending";
                     current.errorReason = `Reintento ${current.attempts}/3: ${result.error}`;
+                    current.errorScreenshot = null;
                     console.log(`🔄 Reporte ${current._id} falló (${current.attempts}/3). Volviendo a pending...`);
                 } else {
                     current.status = "error";
                     current.errorReason = `Máximo de intentos alcanzado (3/3): ${result.error}`;
+                    current.errorScreenshot = result.errorScreenshot || null;
                     console.log(`❌ Reporte ${current._id} falló definitivamente tras 3 intentos.`);
                 }
             }

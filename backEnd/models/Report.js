@@ -50,6 +50,10 @@ const reportSchema = new Schema(
             type: String,
             default: null,
         },
+        errorScreenshot: {
+            type: String,
+            default: null,
+        },
         driveFileId: {
             type: String,
             default: null,

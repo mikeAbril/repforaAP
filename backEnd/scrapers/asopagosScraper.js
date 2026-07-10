@@ -28,8 +28,8 @@ const DOC_LABEL_MAP = {
  * @param {Object} report - Datos del reporte
  * @param {string} downloadDir - Directorio de descargas
  */
-export const scrapeAsopagos = async (report, downloadDir) => {
-    const { instructor, platformData } = report;
+export const scrapeAsopagos = async (report, downloadDir, isLastAttempt = false) => {
+    const { reportId, instructor, platformData } = report;
     const { documentType, documentNumber, fullName, apiKey } = instructor;
     const { mes, anio } = platformData;
 
@@ -40,6 +40,7 @@ export const scrapeAsopagos = async (report, downloadDir) => {
     const solver = new Solver(apiKey);
 
     let browser = null;
+    let page = null;
     const MAX_RETRIES = 5; // Reducimos intentos ya que 2Captcha es más preciso
 
     // Hardcoded a sinValores para evitar el login (conValores requiere inicio de sesión)
@@ -64,7 +65,7 @@ export const scrapeAsopagos = async (report, downloadDir) => {
             javaScriptEnabled: true,
         });
 
-        const page = await context.newPage();
+        page = await context.newPage();
 
         // 1. Navegación inicial
         console.log("   📄 Navegando al formulario de Asopagos...");
@@ -187,7 +188,25 @@ export const scrapeAsopagos = async (report, downloadDir) => {
 
     } catch (error) {
         console.error(`   ❌ Error en Asopagos Scraper: ${error.message}`);
+
+        let errorScreenshot = null;
+        if (isLastAttempt && browser && page && reportId) {
+            try {
+                const publicScreenshotsDir = path.join(downloadDir, "..", "error-screenshots");
+                if (!fs.existsSync(publicScreenshotsDir)) {
+                    fs.mkdirSync(publicScreenshotsDir, { recursive: true });
+                }
+                const screenshotName = `error_${reportId}.png`;
+                const screenshotPath = path.join(publicScreenshotsDir, screenshotName);
+                await page.screenshot({ path: screenshotPath, fullPage: true });
+                errorScreenshot = `/error-screenshots/${screenshotName}`;
+                console.log(`   📸 Captura de pantalla del error definitivo guardada en: ${screenshotPath}`);
+            } catch (screenshotError) {
+                console.error(`   ⚠️ No se pudo tomar captura de pantalla del error: ${screenshotError.message}`);
+            }
+        }
+
         if (browser) await browser.close().catch(() => { });
-        return { success: false, error: error.message };
+        return { success: false, error: error.message, errorScreenshot };
     }
 };

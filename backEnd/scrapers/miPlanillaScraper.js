@@ -16,8 +16,8 @@ const DOC_LABEL_MAP = {
     "CD": "Carnet Diplomático",
 };
 
-export const scrapeMiPlanilla = async (report, downloadDir) => {
-    const { instructor, platformData } = report;
+export const scrapeMiPlanilla = async (report, downloadDir, isLastAttempt = false) => {
+    const { reportId, instructor, platformData } = report;
     const { documentType, documentNumber, fullName, apiKey } = instructor;
     const { numeroPlanilla, mes, anio, valorPagado, fechaPago } = platformData;
 
@@ -52,6 +52,7 @@ export const scrapeMiPlanilla = async (report, downloadDir) => {
     const solver = new Solver(apiKey);
 
     let browser = null;
+    let page = null;
     const MAX_RETRIES = 10;
 
     try {
@@ -70,7 +71,7 @@ export const scrapeMiPlanilla = async (report, downloadDir) => {
             javaScriptEnabled: true,
         });
 
-        const page = await context.newPage();
+        page = await context.newPage();
 
         for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
             console.log(`\n   🔄 Intento ${attempt} de ${MAX_RETRIES}...`);
@@ -323,7 +324,25 @@ export const scrapeMiPlanilla = async (report, downloadDir) => {
         throw new Error(`Se alcanzaron los ${MAX_RETRIES} intentos.`);
     } catch (error) {
         console.error(`   ❌ Error Mi Planilla: ${error.message}`);
+
+        let errorScreenshot = null;
+        if (isLastAttempt && browser && page && reportId) {
+            try {
+                const publicScreenshotsDir = path.join(downloadDir, "..", "error-screenshots");
+                if (!fs.existsSync(publicScreenshotsDir)) {
+                    fs.mkdirSync(publicScreenshotsDir, { recursive: true });
+                }
+                const screenshotName = `error_${reportId}.png`;
+                const screenshotPath = path.join(publicScreenshotsDir, screenshotName);
+                await page.screenshot({ path: screenshotPath, fullPage: true });
+                errorScreenshot = `/error-screenshots/${screenshotName}`;
+                console.log(`   📸 Captura de pantalla del error definitivo guardada en: ${screenshotPath}`);
+            } catch (screenshotError) {
+                console.error(`   ⚠️ No se pudo tomar captura de pantalla del error: ${screenshotError.message}`);
+            }
+        }
+
         if (browser) await browser.close().catch(() => { });
-        return { success: false, error: error.message };
+        return { success: false, error: error.message, errorScreenshot };
     }
 };

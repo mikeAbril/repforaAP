@@ -70,6 +70,13 @@ if (fs.existsSync(publicPath)) {
   app.use(express.static(publicPath));
 }
 
+// --- Servir capturas de pantalla de error de scrapers ---
+const screenshotsPath = path.join(__dirname, "error-screenshots");
+if (!fs.existsSync(screenshotsPath)) {
+  fs.mkdirSync(screenshotsPath, { recursive: true });
+}
+app.use("/error-screenshots", express.static(screenshotsPath));
+
 // --- Rutas ---
 import authRoutes from "./routes/authRoutes.js";
 import reportRoutes from "./routes/reportRoutes.js";

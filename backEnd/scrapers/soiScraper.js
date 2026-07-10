@@ -35,8 +35,8 @@ const SOI_URL = "https://servicio.nuevosoi.com.co/soi/certificadoAportesCotizant
  * @param {string} downloadDir - Ruta absoluta donde guardar el PDF
  * @returns {Promise<{ success: boolean, filePath?: string, error?: string }>}
  */
-export const scrapeSoi = async (report, downloadDir) => {
-    const { instructor, platformData } = report;
+export const scrapeSoi = async (report, downloadDir, isLastAttempt = false) => {
+    const { reportId, instructor, platformData } = report;
     const { documentType, documentNumber, eps } = instructor;
     const { mes, anio } = platformData;
 
@@ -45,6 +45,7 @@ export const scrapeSoi = async (report, downloadDir) => {
     }
 
     let browser = null;
+    let page = null;
 
     try {
         console.log(`\n🔍 SOI Scraper — Doc: ${documentType} ${documentNumber}`);
@@ -62,7 +63,7 @@ export const scrapeSoi = async (report, downloadDir) => {
             viewport: { width: 1280, height: 720 },
         });
 
-        const page = await context.newPage();
+        page = await context.newPage();
 
         // 2. Navegar al formulario (llega directo, sin botones intermedios)
         console.log("   📄 Navegando a SOI...");
@@ -86,7 +87,7 @@ export const scrapeSoi = async (report, downloadDir) => {
 
         // 5. Seleccionar EPS por su ETIQUETA EXACTA (label)
         console.log(`   🏥 Seleccionando EPS exacta: ${eps}...`);
-        
+
         // Verificar si la opción existe antes de seleccionar para evitar timeout de 30s
         const options = await page.$$eval('#administradoraSalud option', opts => opts.map(o => o.text.trim()));
         if (!options.includes(eps)) {
@@ -136,7 +137,7 @@ export const scrapeSoi = async (report, downloadDir) => {
             const screenshotPath = path.join(downloadDir, `error_soi_${documentNumber}.png`);
             await page.screenshot({ path: screenshotPath });
             console.log(`   📸 Captura de pantalla de error guardada en: ${screenshotPath}`);
-            
+
             throw downloadError;
         }
 
@@ -183,10 +184,27 @@ export const scrapeSoi = async (report, downloadDir) => {
     } catch (error) {
         console.error(`   ❌ Error en SOI Scraper: ${error.message}`);
 
+        let errorScreenshot = null;
+        if (isLastAttempt && browser && page && reportId) {
+            try {
+                const publicScreenshotsDir = path.join(downloadDir, "..", "error-screenshots");
+                if (!fs.existsSync(publicScreenshotsDir)) {
+                    fs.mkdirSync(publicScreenshotsDir, { recursive: true });
+                }
+                const screenshotName = `error_${reportId}.png`;
+                const screenshotPath = path.join(publicScreenshotsDir, screenshotName);
+                await page.screenshot({ path: screenshotPath, fullPage: true });
+                errorScreenshot = `/error-screenshots/${screenshotName}`;
+                console.log(`   📸 Captura de pantalla del error definitivo guardada en: ${screenshotPath}`);
+            } catch (screenshotError) {
+                console.error(`   ⚠️ No se pudo tomar captura de pantalla del error: ${screenshotError.message}`);
+            }
+        }
+
         if (browser) {
             await browser.close().catch(() => { });
         }
 
-        return { success: false, error: error.message };
+        return { success: false, error: error.message, errorScreenshot };
     }
 };

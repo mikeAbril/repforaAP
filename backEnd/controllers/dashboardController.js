@@ -275,6 +275,7 @@ const executeScraperAsync = async (report, scraperFn) => {
         }
 
         const reportData = {
+            reportId: report._id,
             instructor: {
                 documentType: instructor.documentType,
                 documentNumber: instructor.documentNumber,
@@ -287,12 +288,25 @@ const executeScraperAsync = async (report, scraperFn) => {
             platformData: report.platformData,
         };
 
-        const result = await scraperFn(reportData, DOWNLOADS_DIR);
+        const result = await scraperFn(reportData, DOWNLOADS_DIR, true);
 
         if (result.success) {
             report.status = "success";
             report.filePath = result.filePath;
             report.errorReason = null;
+
+            // Borrar captura de error anterior si existe
+            if (report.errorScreenshot) {
+                const oldPath = path.join(DOWNLOADS_DIR, "..", report.errorScreenshot);
+                if (fs.existsSync(oldPath)) {
+                    try {
+                        fs.unlinkSync(oldPath);
+                    } catch (e) {
+                        console.error(`⚠️ No se pudo borrar la captura de error vieja: ${e.message}`);
+                    }
+                }
+                report.errorScreenshot = null;
+            }
 
             // Subir a Drive
             try {
@@ -366,6 +380,7 @@ const executeScraperAsync = async (report, scraperFn) => {
 
             report.status = "error";
             report.errorReason = result.error || "Error desconocido en el scraper";
+            report.errorScreenshot = result.errorScreenshot || null;
         }
 
         await report.save();

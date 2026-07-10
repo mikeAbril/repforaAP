@@ -114,6 +114,73 @@
         </div>
       </div>
 
+      <!-- Panel de Resumen de Estados de Reporte -->
+      <div class="status-summary-grid q-mb-xl" v-if="profile.role !== 'admin'">
+        <!-- Tarjeta Pendientes -->
+        <div 
+          class="status-card-mini pending-card cursor-pointer"
+          :class="{ active: filterStatus === 'pending' }"
+          @click="toggleStatusFilter('pending')"
+        >
+          <div class="card-indicator"></div>
+          <div class="card-body">
+            <div class="card-header-mini">
+              <q-icon name="sym_o_schedule" class="status-icon text-amber-8" />
+              <span class="status-label-mini">Pendientes</span>
+            </div>
+            <div class="status-value-mini">{{ stats.pending || 0 }}</div>
+          </div>
+        </div>
+
+        <!-- Tarjeta En Proceso -->
+        <div 
+          class="status-card-mini processing-card cursor-pointer"
+          :class="{ active: filterStatus === 'processing' }"
+          @click="toggleStatusFilter('processing')"
+        >
+          <div class="card-indicator"></div>
+          <div class="card-body">
+            <div class="card-header-mini">
+              <q-icon name="sym_o_sync" class="status-icon text-blue spinner-icon" :class="{ 'spinning': stats.processing > 0 }" />
+              <span class="status-label-mini">En Proceso</span>
+            </div>
+            <div class="status-value-mini">{{ stats.processing || 0 }}</div>
+          </div>
+        </div>
+
+        <!-- Tarjeta Completados -->
+        <div 
+          class="status-card-mini success-card cursor-pointer"
+          :class="{ active: filterStatus === 'success' }"
+          @click="toggleStatusFilter('success')"
+        >
+          <div class="card-indicator"></div>
+          <div class="card-body">
+            <div class="card-header-mini">
+              <q-icon name="sym_o_check_circle" class="status-icon text-green-9" />
+              <span class="status-label-mini">Completados</span>
+            </div>
+            <div class="status-value-mini">{{ (stats.success || 0) + (stats.downloaded || 0) }}</div>
+          </div>
+        </div>
+
+        <!-- Tarjeta Fallidos -->
+        <div 
+          class="status-card-mini error-card cursor-pointer"
+          :class="{ active: filterStatus === 'error' }"
+          @click="toggleStatusFilter('error')"
+        >
+          <div class="card-indicator"></div>
+          <div class="card-body">
+            <div class="card-header-mini">
+              <q-icon name="sym_o_error" class="status-icon text-red" />
+              <span class="status-label-mini">Fallidos</span>
+            </div>
+            <div class="status-value-mini">{{ stats.error || 0 }}</div>
+          </div>
+        </div>
+      </div>
+
       <!-- History Section -->
       <section class="history-section" v-if="profile.role !== 'admin'">
         <div class="history-card-premium">
@@ -246,7 +313,7 @@
                   >
                     <q-icon name="sym_o_open_in_new" size="16px" class="q-ml-sm" />
                   </q-btn>
-                  <div v-else-if="props.row.status === 'error'" class="text-error-action cursor-pointer" @click="showError(props.row.errorReason)">
+                  <div v-else-if="props.row.status === 'error'" class="text-error-action cursor-pointer" @click="showError(props.row)">
                     <q-icon name="sym_o_info" size="16px" class="q-mr-xs" color="negative" />
                     <span style="color: var(--negative, #C10015); font-size: 0.8rem; font-weight: 600;">Ver Error</span>
                   </div>
@@ -352,6 +419,53 @@
               label="Guardar"
               @click="saveApiKeyFromModal"
             />
+          </q-card-actions>
+        </q-card>
+      </q-dialog>
+
+      <!-- Modal para ver captura de error -->
+      <q-dialog v-model="showErrorScreenshotModal">
+        <q-card style="width: 800px; max-width: 95vw; border-radius: 16px;">
+          <q-card-section class="row items-center q-pb-none">
+            <div class="text-h6 text-negative row items-center text-weight-bold">
+              <q-icon name="sym_o_error" size="28px" class="q-mr-sm" color="negative" />
+              Detalle del Error de la Planilla
+            </div>
+            <q-space />
+            <q-btn icon="sym_o_close" flat round dense v-close-popup />
+          </q-card-section>
+          
+          <q-card-section class="q-pt-md">
+            <!-- Razón del error en texto descriptivo -->
+            <div class="error-reason-box q-mb-md q-pa-md">
+              <p class="q-mb-none text-weight-bold text-grey-9">Mensaje del sistema:</p>
+              <p class="q-mb-none text-grey-8">{{ currentErrorReason || 'El scraper falló por un problema desconocido en la plataforma.' }}</p>
+            </div>
+
+            <!-- Captura de pantalla si existe -->
+            <div v-if="currentErrorScreenshotUrl" class="screenshot-container text-center">
+              <p class="text-subtitle2 text-grey-7 q-mb-sm text-left">
+                <q-icon name="sym_o_photo_camera" size="18px" class="q-mr-xs" />
+                Captura de pantalla tomada en el momento del fallo:
+              </p>
+              <a :href="currentErrorScreenshotUrl" target="_blank" class="block cursor-pointer">
+                <img 
+                  :src="currentErrorScreenshotUrl" 
+                  alt="Captura de pantalla del error" 
+                  class="error-screenshot-img"
+                />
+              </a>
+              <p class="text-caption text-grey-5 q-mt-xs">Haz clic en la imagen para abrirla en tamaño completo</p>
+            </div>
+            
+            <div v-else class="text-center q-py-lg text-grey-6">
+              <q-icon name="sym_o_image_not_supported" size="48px" class="q-mb-sm" />
+              <p class="q-mb-none">No hay captura de pantalla disponible para este reporte.</p>
+            </div>
+          </q-card-section>
+          
+          <q-card-actions align="right" class="bg-grey-1 q-pa-md">
+            <q-btn flat label="Cerrar" color="primary" v-close-popup />
           </q-card-actions>
         </q-card>
       </q-dialog>
@@ -650,7 +764,10 @@ const runScraper = async (row) => {
         icon: 'sym_o_check_circle'
       })
       // Refrescar para mostrar el estado "processing"
-      setTimeout(() => loadReports(pagination.value.page), 2000)
+      setTimeout(() => {
+        loadReports(pagination.value.page)
+        loadStats()
+      }, 2000)
     } catch (error) {
       const msg = error.response?.data?.message || 'Error al ejecutar el scraper'
       $q.notify({ color: 'negative', message: msg, icon: 'sym_o_warning' })
@@ -660,12 +777,21 @@ const runScraper = async (row) => {
   })
 }
 
-const showError = (reason) => {
-  $q.dialog({
-    title: 'Motivo del Error',
-    message: reason || 'El scraper falló por un problema desconocido en la plataforma.',
-    color: 'negative'
-  })
+const showErrorScreenshotModal = ref(false)
+const currentErrorReason = ref('')
+const currentErrorScreenshotUrl = ref('')
+
+const showError = (row) => {
+  currentErrorReason.value = row.errorReason || ''
+  
+  if (row.errorScreenshot) {
+    const apiBaseUrl = (import.meta.env.VITE_API_URL || 'http://localhost:3000/api').replace(/\/api$/, '')
+    currentErrorScreenshotUrl.value = apiBaseUrl + row.errorScreenshot
+  } else {
+    currentErrorScreenshotUrl.value = ''
+  }
+  
+  showErrorScreenshotModal.value = true
 }
 
 const loadStats = async () => {
@@ -722,6 +848,14 @@ watch([filterPlatform, filterMonth, filterYear, filterStatus], () => {
   pagination.value.page = 1
   loadReports(1)
 })
+
+const toggleStatusFilter = (status) => {
+  if (filterStatus.value === status) {
+    filterStatus.value = null
+  } else {
+    filterStatus.value = status
+  }
+}
 
 const onRequest = (props) => {
   pagination.value.page = props.pagination.page
@@ -1175,5 +1309,130 @@ onMounted(async () => {
   align-items: center;
   font-size: 0.8rem;
   color: var(--text-muted);
+}
+
+/* Status Summary Grid */
+.status-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.5rem;
+}
+
+@media (max-width: 900px) {
+  .status-summary-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 500px) {
+  .status-summary-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.status-card-mini {
+  background: var(--white);
+  border-radius: var(--radius, 16px);
+  border: 1px solid var(--border, #e0e0e0);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  position: relative;
+  transition: all 0.25s ease;
+  user-select: none;
+}
+
+.status-card-mini:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.08);
+}
+
+.status-card-mini.active {
+  border-color: var(--color_button, #2e7d32);
+  box-shadow: 0 4px 12px rgba(46, 125, 50, 0.15);
+}
+
+.card-indicator {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 4px;
+}
+
+/* Indicators Colors */
+.pending-card .card-indicator { background-color: var(--warning, #f5b041); }
+.processing-card .card-indicator { background-color: #3498db; }
+.success-card .card-indicator { background-color: var(--color_button, #2e7d32); }
+.error-card .card-indicator { background-color: var(--negative, #C10015); }
+
+/* Active States Background Tint or Borders */
+.pending-card.active { border-color: var(--warning, #f5b041); background-color: #fffdf5; }
+.processing-card.active { border-color: #3498db; background-color: #f7faff; }
+.success-card.active { border-color: var(--color_button, #2e7d32); background-color: #f5fbf6; }
+.error-card.active { border-color: var(--negative, #C10015); background-color: #fff5f5; }
+
+.card-body {
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.card-header-mini {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.status-icon {
+  font-size: 20px;
+}
+
+.status-label-mini {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.status-value-mini {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: var(--text-dark);
+  line-height: 1.2;
+}
+
+/* Spinning animation for processing state */
+.spinner-icon.spinning {
+  animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.error-reason-box {
+  background-color: #fff5f5;
+  border-left: 4px solid var(--negative, #C10015);
+  border-radius: 4px;
+}
+.screenshot-container {
+  border: 1px solid var(--border, #e0e0e0);
+  border-radius: 8px;
+  padding: 1rem;
+  background-color: var(--bg-light, #f9f9f9);
+}
+.error-screenshot-img {
+  max-width: 100%;
+  max-height: 450px;
+  border-radius: 6px;
+  border: 1px solid var(--border, #e0e0e0);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  transition: transform 0.2s ease;
+}
+.error-screenshot-img:hover {
+  transform: scale(1.01);
 }
 </style>
